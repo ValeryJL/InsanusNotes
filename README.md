@@ -6,6 +6,7 @@ A Linux-first, object-oriented note-taking and knowledge management app for prog
 
 ### Core Concepts
 
+- **Project-Based Workflow**: Each project is a self-contained workspace with its own `.insanusnote.config` file
 - **Notes as Instances**: Each note is an instance with properties defined in Markdown with YAML frontmatter
 - **Interfaces as Classes**: Define schemas with inheritance that validate note structure
 - **Data (CSV) as Queryable Sources**: Import CSV files that can be referenced in notes
@@ -13,6 +14,9 @@ A Linux-first, object-oriented note-taking and knowledge management app for prog
 
 ### Key Capabilities
 
+- **Project Management**: Create and open projects, with recent projects tracked for quick access
+- **File Explorer**: Visual file and folder browser with create, delete, and rename operations
+- **Multi-Format Support**: Open any file type - markdown files in editor, others in default applications
 - **Markdown Notes with Metadata**: Write notes in Markdown with YAML frontmatter for structured data
 - **Interface-Based Validation**: Define interfaces that enforce schema constraints on notes
 - **Note and Interface Inheritance**: Interfaces can extend other interfaces, inheriting and overriding properties
@@ -57,6 +61,44 @@ npm start
 ```
 
 ## Usage
+
+### First Launch
+
+When you first start InsanusNotes, you'll see the project selection window:
+
+1. **Create New Project**: Click "New Project" to create a new workspace
+   - Enter a project name
+   - Select a location for your project
+   - Click "Create"
+
+2. **Open Existing Project**: Click "Open Project" to open an existing InsanusNotes project
+   - Select the project folder containing `.insanusnote.config`
+
+3. **Recent Projects**: Previously opened projects appear in the list for quick access
+
+### Working with Files
+
+Once a project is open, you'll see the file explorer on the left:
+
+- **Create Files**: Click the 📄 button to create a new file (any extension)
+- **Create Folders**: Click the 📁 button to create a new folder
+- **Open Files**: 
+  - Click `.md` files to edit them in the built-in editor
+  - Click other files (PDF, images, etc.) to open them in your default application
+- **Delete Files/Folders**: Click the × button that appears when hovering over items
+
+### Project Structure
+
+Each project has this structure:
+
+```
+MyProject/
+├── .insanusnote.config    # Project configuration
+├── .insanusnotes.db       # Local database
+├── notes/                 # Your markdown notes
+├── interfaces/            # Interface definitions
+└── data/                  # CSV data files
+```
 
 ### Quick Start with Examples
 
