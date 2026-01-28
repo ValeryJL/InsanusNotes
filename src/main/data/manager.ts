@@ -1,16 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { DatabaseManager } from '../../database/manager';
-
-export interface DataSource {
-  id: string;
-  name: string;
-  filePath: string;
-  headers: string[];
-  rowCount: number;
-  createdAt: number;
-  updatedAt: number;
-}
+import { DataSource } from '../../shared/types';
 
 export class DataManager {
   private csvCache: Map<string, string[][]> = new Map();

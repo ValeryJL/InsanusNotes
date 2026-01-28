@@ -2,17 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
-
-interface Note {
-  id: string;
-  title: string;
-  content: string;
-  metadata: Record<string, any>;
-  interfaceId?: string;
-  filePath: string;
-  createdAt: number;
-  updatedAt: number;
-}
+import { Note } from '../../shared/types';
 
 interface NoteEditorProps {
   note: Note;
@@ -34,7 +24,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onSave }) => {
     content: note.content,
     editorProps: {
       attributes: {
-        class: 'editor-content',
+        class: 'prose-editor',
       },
     },
   });
@@ -46,7 +36,15 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onSave }) => {
     setTitle(note.title);
     setMetadata(note.metadata);
     setInterfaceId(note.interfaceId || '');
-  }, [note.id]);
+  }, [note.id, editor]);
+
+  useEffect(() => {
+    return () => {
+      if (editor) {
+        editor.destroy();
+      }
+    };
+  }, [editor]);
 
   const handleSave = () => {
     if (!editor) return;
@@ -57,9 +55,9 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ note, onSave }) => {
       content: editor.getHTML(),
       metadata: {
         ...metadata,
-        ...(interfaceId ? { interface: interfaceId } : {}),
+        ...(interfaceId && interfaceId.trim() ? { interface: interfaceId } : {}),
       },
-      interfaceId: interfaceId || undefined,
+      interfaceId: interfaceId && interfaceId.trim() ? interfaceId : undefined,
       updatedAt: Date.now(),
     };
 

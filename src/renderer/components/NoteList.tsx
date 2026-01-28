@@ -1,10 +1,5 @@
 import React from 'react';
-
-interface Note {
-  id: string;
-  title: string;
-  updatedAt: number;
-}
+import { Note } from '../../shared/types';
 
 interface NoteListProps {
   notes: Note[];

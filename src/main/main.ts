@@ -26,7 +26,7 @@ function createWindow() {
 
   // In production, load the built index.html
   // In development, this would connect to webpack-dev-server
-  mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
+  mainWindow.loadFile(path.join(__dirname, 'renderer/index.html'));
 
   mainWindow.on('closed', () => {
     mainWindow = null;
@@ -45,6 +45,9 @@ async function initializeApp() {
   noteManager = new NoteManager(dbManager, notesPath);
   interfaceManager = new InterfaceManager(dbManager, notesPath);
   dataManager = new DataManager(dbManager, notesPath);
+
+  // Link managers to enable validation
+  noteManager.setInterfaceManager(interfaceManager);
 
   // Initialize file system watcher
   fileWatcher = new FileSystemWatcher(notesPath, {
@@ -84,52 +87,99 @@ app.on('quit', () => {
 
 // IPC Handlers
 ipcMain.handle('notes:getAll', async () => {
-  return await noteManager.getAllNotes();
+  try {
+    return await noteManager.getAllNotes();
+  } catch (error) {
+    console.error('Error getting all notes:', error);
+    throw error;
+  }
 });
 
 ipcMain.handle('notes:getById', async (_, id: string) => {
-  return await noteManager.getNoteById(id);
+  try {
+    return await noteManager.getNoteById(id);
+  } catch (error) {
+    console.error(`Error getting note ${id}:`, error);
+    throw error;
+  }
 });
 
 ipcMain.handle('notes:save', async (_, note: any) => {
-  return await noteManager.saveNote(note);
+  try {
+    return await noteManager.saveNote(note);
+  } catch (error) {
+    console.error('Error saving note:', error);
+    throw error;
+  }
 });
 
 ipcMain.handle('notes:delete', async (_, id: string) => {
-  return await noteManager.deleteNote(id);
+  try {
+    return await noteManager.deleteNote(id);
+  } catch (error) {
+    console.error(`Error deleting note ${id}:`, error);
+    throw error;
+  }
 });
 
 ipcMain.handle('interfaces:getAll', async () => {
-  return await interfaceManager.getAllInterfaces();
+  try {
+    return await interfaceManager.getAllInterfaces();
+  } catch (error) {
+    console.error('Error getting all interfaces:', error);
+    throw error;
+  }
 });
 
 ipcMain.handle('interfaces:getById', async (_, id: string) => {
-  return await interfaceManager.getInterfaceById(id);
+  try {
+    return await interfaceManager.getInterfaceById(id);
+  } catch (error) {
+    console.error(`Error getting interface ${id}:`, error);
+    throw error;
+  }
 });
 
 ipcMain.handle('data:query', async (_, dataId: string, row?: number, col?: string) => {
-  return await dataManager.queryData(dataId, row, col);
+  try {
+    return await dataManager.queryData(dataId, row, col);
+  } catch (error) {
+    console.error('Error querying data:', error);
+    throw error;
+  }
 });
 
 ipcMain.handle('references:resolve', async (_, reference: string) => {
-  // Parse and resolve [[Note.prop]] or [[Data.row.col]] references
-  const match = reference.match(/\[\[(.+?)\]\]/);
-  if (!match) return null;
+  try {
+    // Parse and resolve [[Note.prop]] or [[Data.row.col]] references
+    const match = reference.match(/\[\[(.+?)\]\]/);
+    if (!match) return null;
 
-  const parts = match[1].split('.');
-  const type = parts[0];
+    const parts = match[1].split('.');
+    const type = parts[0];
 
-  if (type === 'Note') {
-    const noteId = parts[1];
-    const prop = parts[2];
-    const note = await noteManager.getNoteById(noteId);
-    return note?.metadata?.[prop];
-  } else if (type === 'Data') {
-    const dataId = parts[1];
-    const row = parseInt(parts[2]);
-    const col = parts[3];
-    return await dataManager.queryData(dataId, row, col);
+    if (type === 'Note') {
+      const noteId = parts[1];
+      const prop = parts[2];
+      
+      // Validate noteId to prevent SQL injection
+      if (!noteId || typeof noteId !== 'string' || noteId.includes("'") || noteId.includes('"')) {
+        console.warn('Invalid noteId in reference:', noteId);
+        return null;
+      }
+      
+      const note = await noteManager.getNoteById(noteId);
+      return note?.metadata?.[prop];
+    } else if (type === 'Data') {
+      const dataId = parts[1];
+      const row = parseInt(parts[2]);
+      const col = parts[3];
+      return await dataManager.queryData(dataId, row, col);
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Error resolving reference:', error);
+    throw error;
   }
-
-  return null;
 });

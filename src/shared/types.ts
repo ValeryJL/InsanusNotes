@@ -36,3 +36,29 @@ export interface DataSource {
   createdAt: number;
   updatedAt: number;
 }
+
+// Window API type declaration for renderer process
+export interface InsanusAPI {
+  notes: {
+    getAll: () => Promise<Note[]>;
+    getById: (id: string) => Promise<Note | null>;
+    save: (note: Note) => Promise<void>;
+    delete: (id: string) => Promise<void>;
+  };
+  interfaces: {
+    getAll: () => Promise<Interface[]>;
+    getById: (id: string) => Promise<Interface | null>;
+  };
+  data: {
+    query: (dataId: string, row?: number, col?: string) => Promise<any>;
+  };
+  references: {
+    resolve: (reference: string) => Promise<any>;
+  };
+}
+
+declare global {
+  interface Window {
+    api: InsanusAPI;
+  }
+}

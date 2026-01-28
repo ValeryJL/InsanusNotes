@@ -1,25 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { DatabaseManager } from '../../database/manager';
-import { Note } from '../notes/manager';
-
-export interface InterfaceSchema {
-  properties: Record<string, {
-    type: 'string' | 'number' | 'boolean' | 'date';
-    required?: boolean;
-    default?: any;
-  }>;
-}
-
-export interface Interface {
-  id: string;
-  name: string;
-  schema: InterfaceSchema;
-  parentId?: string;
-  filePath: string;
-  createdAt: number;
-  updatedAt: number;
-}
+import { Note, Interface, InterfaceSchema } from '../../shared/types';
 
 export class InterfaceManager {
   constructor(

@@ -12,7 +12,7 @@ createdAt: 1706400000000
 
 # Aria Shadowblade
 
-A skilled elven ranger from the [[Location.silverwood-forest.name]]. Known for her exceptional tracking abilities and mastery of the bow.
+A skilled elven ranger from the [[Note.silverwood-forest.name]]. Known for her exceptional tracking abilities and mastery of the bow.
 
 ## Background
 

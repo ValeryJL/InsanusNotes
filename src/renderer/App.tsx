@@ -1,18 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import NoteList from './components/NoteList';
 import NoteEditor from './components/NoteEditor';
+import { Note } from '../shared/types';
 import './styles.css';
-
-interface Note {
-  id: string;
-  title: string;
-  content: string;
-  metadata: Record<string, any>;
-  interfaceId?: string;
-  filePath: string;
-  createdAt: number;
-  updatedAt: number;
-}
 
 const App: React.FC = () => {
   const [notes, setNotes] = useState<Note[]>([]);
@@ -26,7 +16,7 @@ const App: React.FC = () => {
   const loadNotes = async () => {
     setLoading(true);
     try {
-      const allNotes = await (window as any).api.notes.getAll();
+      const allNotes = await window.api.notes.getAll();
       setNotes(allNotes);
     } catch (error) {
       console.error('Failed to load notes:', error);
@@ -37,7 +27,7 @@ const App: React.FC = () => {
 
   const handleSelectNote = async (noteId: string) => {
     try {
-      const note = await (window as any).api.notes.getById(noteId);
+      const note = await window.api.notes.getById(noteId);
       setSelectedNote(note);
     } catch (error) {
       console.error('Failed to load note:', error);
@@ -46,7 +36,7 @@ const App: React.FC = () => {
 
   const handleSaveNote = async (note: Note) => {
     try {
-      await (window as any).api.notes.save(note);
+      await window.api.notes.save(note);
       await loadNotes();
       setSelectedNote(note);
     } catch (error) {
@@ -69,7 +59,7 @@ const App: React.FC = () => {
 
   const handleDeleteNote = async (noteId: string) => {
     try {
-      await (window as any).api.notes.delete(noteId);
+      await window.api.notes.delete(noteId);
       await loadNotes();
       if (selectedNote?.id === noteId) {
         setSelectedNote(null);

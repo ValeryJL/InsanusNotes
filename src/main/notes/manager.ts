@@ -1,21 +1,10 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { DatabaseManager } from '../../database/manager';
-import { InterfaceManager } from '../interfaces/manager';
-
-export interface Note {
-  id: string;
-  title: string;
-  content: string;
-  metadata: Record<string, any>;
-  interfaceId?: string;
-  filePath: string;
-  createdAt: number;
-  updatedAt: number;
-}
+import { Note, InterfaceSchema } from '../../shared/types';
 
 export class NoteManager {
-  private interfaceManager?: InterfaceManager;
+  private interfaceManager?: any;
 
   constructor(
     private dbManager: DatabaseManager,
@@ -26,7 +15,7 @@ export class NoteManager {
     }
   }
 
-  setInterfaceManager(manager: InterfaceManager) {
+  setInterfaceManager(manager: any) {
     this.interfaceManager = manager;
   }
 
