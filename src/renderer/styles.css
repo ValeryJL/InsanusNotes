@@ -256,6 +256,11 @@
   padding: 30px;
 }
 
+.prose-editor {
+  outline: none;
+  min-height: 100%;
+}
+
 .ProseMirror {
   outline: none;
   min-height: 100%;
