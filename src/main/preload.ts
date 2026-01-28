@@ -5,7 +5,8 @@ contextBridge.exposeInMainWorld('api', {
     getAll: () => ipcRenderer.invoke('notes:getAll'),
     getById: (id: string) => ipcRenderer.invoke('notes:getById', id),
     save: (note: any) => ipcRenderer.invoke('notes:save', note),
-    delete: (id: string) => ipcRenderer.invoke('notes:delete', id)
+    delete: (id: string) => ipcRenderer.invoke('notes:delete', id),
+    resolveReference: (reference: string) => ipcRenderer.invoke('notes:resolve-reference', reference)
   },
   interfaces: {
     getAll: () => ipcRenderer.invoke('interfaces:getAll'),

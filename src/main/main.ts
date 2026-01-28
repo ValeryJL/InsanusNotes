@@ -286,6 +286,65 @@ ipcMain.handle('notes:delete', async (_, id: string) => {
   }
 });
 
+ipcMain.handle('notes:resolve-reference', async (_, reference: string) => {
+  try {
+    // Parse reference: [[file]], [[file.property]], [[file.row.field]]
+    const refMatch = reference.match(/^\[\[(.+?)\]\]$/);
+    if (!refMatch) {
+      return reference; // Not a valid reference, return as is
+    }
+
+    const parts = refMatch[1].split('.');
+    
+    if (parts.length === 1) {
+      // Simple file reference: [[filename]]
+      const fileName = parts[0];
+      return fileName; // Return just the filename
+    } else if (parts.length === 2) {
+      // Property reference: [[file.property]] or CSV row: [[file.row]]
+      const [fileName, propertyOrRow] = parts;
+      
+      // Try to get note property first
+      try {
+        const notes = await noteManager.getAllNotes();
+        const note = notes.find(n => n.id === fileName || n.metadata?.name === fileName);
+        if (note && note.metadata && propertyOrRow in note.metadata) {
+          return String(note.metadata[propertyOrRow]);
+        }
+      } catch {}
+      
+      // Try CSV row (get first column)
+      try {
+        const csvData = await dataManager.queryData(fileName);
+        const rowIndex = parseInt(propertyOrRow);
+        if (!isNaN(rowIndex) && csvData && csvData[rowIndex]) {
+          const firstKey = Object.keys(csvData[rowIndex])[0];
+          return String(csvData[rowIndex][firstKey]);
+        }
+      } catch {}
+      
+      return `${fileName}.${propertyOrRow}`; // Fallback
+    } else if (parts.length === 3) {
+      // CSV field: [[file.row.field]]
+      const [fileName, row, field] = parts;
+      try {
+        const csvData = await dataManager.queryData(fileName);
+        const rowIndex = parseInt(row);
+        if (!isNaN(rowIndex) && csvData && csvData[rowIndex] && field in csvData[rowIndex]) {
+          return String(csvData[rowIndex][field]);
+        }
+      } catch {}
+      
+      return `${fileName}.${row}.${field}`; // Fallback
+    }
+    
+    return reference;
+  } catch (error) {
+    console.error('Error resolving reference:', error);
+    return reference; // Return original on error
+  }
+});
+
 // Interface IPC Handlers
 ipcMain.handle('interfaces:getAll', async () => {
   try {
