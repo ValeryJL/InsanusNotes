@@ -95,6 +95,11 @@ async function initializeProject(projectPath: string) {
   await fileWatcher.start();
 }
 
+// Suppress harmless console warnings
+app.commandLine.appendSwitch('disable-gpu-sandbox');
+app.commandLine.appendSwitch('disable-software-rasterizer');
+app.commandLine.appendSwitch('log-level', '3');
+
 app.on('ready', async () => {
   const userDataPath = app.getPath('userData');
   projectManager = new ProjectManager(userDataPath);
