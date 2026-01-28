@@ -5,11 +5,42 @@ A Linux-first, object-oriented note-taking and knowledge management application 
 ## 🌟 Overview
 
 InsanusNotes treats notes as **instances** of classes (interfaces), enabling structured knowledge management with:
+- **Notion-like editor** - Clean interface with slash commands and reference autocomplete
 - **Project-based workflow** - Each project is a self-contained workspace
 - **Interface-based schemas** - Define note structures with inheritance
 - **Dynamic references** - Link notes and query CSV data with `[[Note.prop]]` or `[[Data.row.col]]`
 - **Real-time indexing** - SQLite database indexes your filesystem automatically
 - **Multi-format support** - Markdown files in editor, others open with default apps
+
+## ✨ Editor Features
+
+### Notion-like Experience
+- **Clean, minimalist design** - Large title, no visible toolbars
+- **Hover properties** - Metadata fields appear when hovering over the title
+- **Auto-save** - Changes save automatically after 1 second
+
+### Slash Commands (`/`)
+Type `/` anywhere in your note to open the command menu:
+- `/heading1` or `/h1` - Large heading
+- `/heading2` or `/h2` - Medium heading  
+- `/heading3` or `/h3` - Small heading
+- `/bullet` - Bullet list
+- `/numbered` - Numbered list
+- `/code` - Code block
+- `/quote` - Quote block
+
+**Navigation:**
+- ↑↓ arrows to select
+- Enter or Tab to insert
+- Escape to cancel
+
+### Reference Menu (`[[`)
+Type `[[` to open the reference menu showing all markdown files:
+- Start typing to filter files
+- ↑↓ arrows to navigate
+- Enter or Tab to insert reference
+- Shows file paths for context
+- Auto-completes to `[[filename]]`
 
 ## 📦 Installation
 
@@ -77,9 +108,11 @@ InsanusNotes/
 │   │   ├── project-selection.js # Project selection logic
 │   │   ├── components/          # React components
 │   │   │   ├── FileExplorer.tsx # File browser sidebar
-│   │   │   ├── NoteEditor.tsx   # TipTap markdown editor
+│   │   │   ├── NotionEditor.tsx # Notion-like markdown editor with / and [[ commands
+│   │   │   ├── NoteEditor.tsx   # (Legacy) Original TipTap editor
 │   │   │   └── NoteList.tsx     # (Legacy) Note list component
 │   │   ├── styles.css           # Main styles
+│   │   ├── notion-editor-styles.css # Notion editor styles
 │   │   └── file-explorer-styles.css # File explorer styles
 │   └── shared/                   # Shared between main and renderer
 │       └── types.ts             # TypeScript type definitions
