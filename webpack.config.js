@@ -23,6 +23,11 @@ module.exports = [
       path: path.resolve(__dirname, 'dist'),
       filename: 'main.js',
     },
+    // Do not bundle native modules used by the main process
+    externals: {
+      'better-sqlite3': 'commonjs2 better-sqlite3',
+      bindings: 'commonjs2 bindings'
+    },
     node: {
       __dirname: false,
       __filename: false,
