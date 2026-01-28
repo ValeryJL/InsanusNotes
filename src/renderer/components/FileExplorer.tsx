@@ -24,9 +24,13 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ onFileSelect }) => {
   const loadProject = async () => {
     try {
       const proj = await window.api.projects.getCurrent();
+      console.log('Loaded project:', proj);
       if (proj) {
         setProject(proj);
         setCurrentPath(proj.path);
+        console.log('Current path set to:', proj.path);
+      } else {
+        console.warn('No project loaded');
       }
     } catch (error) {
       console.error('Failed to load project:', error);
@@ -35,7 +39,9 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ onFileSelect }) => {
 
   const loadFiles = async (path: string) => {
     try {
+      console.log('Loading files from:', path);
       const fileList = await window.api.files.list(path);
+      console.log('Files loaded:', fileList.length, 'items');
       setFiles(fileList);
     } catch (error) {
       console.error('Failed to load files:', error);
@@ -75,12 +81,19 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ onFileSelect }) => {
     if (!fileName) return;
 
     try {
+      if (!currentPath) {
+        alert('Error: No directory selected. Please select a folder first.');
+        return;
+      }
+      
       const filePath = `${currentPath}/${fileName}`;
+      console.log('Creating file:', filePath);
       await window.api.files.create(filePath, 'file');
       await loadFiles(currentPath);
+      console.log('File created successfully');
     } catch (error) {
       console.error('Failed to create file:', error);
-      alert('Failed to create file');
+      alert(`Failed to create file: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -89,12 +102,19 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ onFileSelect }) => {
     if (!folderName) return;
 
     try {
+      if (!currentPath) {
+        alert('Error: No directory selected. Please select a folder first.');
+        return;
+      }
+      
       const folderPath = `${currentPath}/${folderName}`;
+      console.log('Creating folder:', folderPath);
       await window.api.files.create(folderPath, 'directory');
       await loadFiles(currentPath);
+      console.log('Folder created successfully');
     } catch (error) {
       console.error('Failed to create folder:', error);
-      alert('Failed to create folder');
+      alert(`Failed to create folder: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 

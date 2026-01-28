@@ -38,20 +38,34 @@ export class FileManager {
   }
 
   async createFile(filePath: string): Promise<void> {
-    const dir = path.dirname(filePath);
-    
-    // Ensure parent directory exists
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
+    try {
+      const dir = path.dirname(filePath);
+      
+      // Ensure parent directory exists
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
 
-    // Create empty file
-    fs.writeFileSync(filePath, '', 'utf-8');
+      // Create empty file
+      fs.writeFileSync(filePath, '', 'utf-8');
+      console.log('File created successfully:', filePath);
+    } catch (error) {
+      console.error('Error creating file:', filePath, error);
+      throw new Error(`Failed to create file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   async createDirectory(dirPath: string): Promise<void> {
-    if (!fs.existsSync(dirPath)) {
-      fs.mkdirSync(dirPath, { recursive: true });
+    try {
+      if (!fs.existsSync(dirPath)) {
+        fs.mkdirSync(dirPath, { recursive: true });
+        console.log('Directory created successfully:', dirPath);
+      } else {
+        console.log('Directory already exists:', dirPath);
+      }
+    } catch (error) {
+      console.error('Error creating directory:', dirPath, error);
+      throw new Error(`Failed to create directory: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
