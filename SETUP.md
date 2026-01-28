@@ -46,6 +46,21 @@ npm install             # Reinstall all dependencies
 npm run build           # Build the project
 ```
 
+#### Error: better-sqlite3 Native Module Version Mismatch
+
+**Problem:** Error message like "was compiled against a different Node.js version using NODE_MODULE_VERSION..."
+
+**Cause:** The `better-sqlite3` native module needs to be compiled specifically for Electron's Node.js version.
+
+**Solution:**
+```bash
+npm run rebuild         # Rebuild native modules for Electron
+# OR
+npm install             # postinstall script will automatically rebuild
+```
+
+**Note:** The `postinstall` script now automatically rebuilds `better-sqlite3` when you run `npm install`, so this should be handled automatically in most cases.
+
 #### Build Fails After Pulling Updates
 
 Always run `npm install` after pulling changes, as package.json may have been updated with new dependencies.
@@ -97,6 +112,21 @@ rm -rf node_modules     # Eliminar dependencias antiguas
 npm install             # Reinstalar todas las dependencias
 npm run build           # Compilar el proyecto
 ```
+
+#### Error: Versión del Módulo Nativo better-sqlite3 No Coincide
+
+**Problema:** Mensaje de error como "was compiled against a different Node.js version using NODE_MODULE_VERSION..."
+
+**Causa:** El módulo nativo `better-sqlite3` necesita ser compilado específicamente para la versión de Node.js de Electron.
+
+**Solución:**
+```bash
+npm run rebuild         # Recompilar módulos nativos para Electron
+# O
+npm install             # El script postinstall recompilará automáticamente
+```
+
+**Nota:** El script `postinstall` ahora recompila automáticamente `better-sqlite3` cuando ejecutas `npm install`, por lo que esto debería manejarse automáticamente en la mayoría de los casos.
 
 #### La Compilación Falla Después de Actualizar
 

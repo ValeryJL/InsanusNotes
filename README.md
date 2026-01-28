@@ -38,7 +38,7 @@ A Linux-first, object-oriented note-taking and knowledge management app for prog
 **Important:** After cloning or pulling updates, always run `npm install` to ensure all dependencies are installed.
 
 ```bash
-# Install dependencies
+# Install dependencies (includes automatic rebuild of native modules)
 npm install
 
 # Build the application
@@ -48,7 +48,14 @@ npm run build
 npm start
 ```
 
+**Note:** The `npm install` command will automatically rebuild native modules (like `better-sqlite3`) for Electron via the postinstall script.
+
 **Troubleshooting:** If you encounter build errors after pulling updates, see [SETUP.md](SETUP.md) for detailed troubleshooting steps.
+
+### Common Issues
+
+- **Native module errors**: Run `npm run rebuild` to recompile native modules for Electron
+- **Dependency errors**: Delete `node_modules` and run `npm install` again
 
 ## Development
 
