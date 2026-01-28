@@ -48,6 +48,7 @@
     "webpack-dev-server": "^5.2.3"
   },
   "dependencies": {
+    "@floating-ui/dom": "^1.7.5",
     "@tiptap/extension-code-block-lowlight": "^3.18.0",
     "@tiptap/extension-link": "^3.18.0",
     "@tiptap/react": "^3.18.0",
