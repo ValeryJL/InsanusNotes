@@ -563,3 +563,364 @@
   font-size: 12px;
   color: #888;
 }
+
+/* Reference Nodes */
+.reference-node {
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.reference-raw {
+  background: #3a3a3a;
+  color: #d4d4d4;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9em;
+}
+
+.reference-resolved {
+  color: #2563eb;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+}
+
+.reference-resolved:hover {
+  border-bottom-color: #2563eb;
+}
+
+.reference-unresolved {
+  color: #dc2626;
+  text-decoration: underline;
+  text-decoration-style: wavy;
+}
+
+/* Properties Panel Improvements */
+.notion-properties-panel h4 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.notion-properties-panel h5 {
+  margin: 12px 0 8px 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #9a9a9a;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.notion-properties-panel hr {
+  border: none;
+  border-top: 1px solid #3a3a3a;
+  margin: 12px 0;
+}
+
+.notion-property {
+  margin-bottom: 12px;
+}
+
+.notion-property label {
+  display: block;
+  font-size: 13px;
+  color: #9a9a9a;
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+
+.notion-property input {
+  width: 100%;
+  padding: 8px 10px;
+  background: #1e1e1e;
+  border: 1px solid #3a3a3a;
+  border-radius: 4px;
+  color: #d4d4d4;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.notion-property input:focus {
+  border-color: #0e639c;
+}
+
+.notion-property-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.property-name {
+  flex: 0 0 120px;
+  padding: 6px 8px;
+  background: #1e1e1e;
+  border: 1px solid #3a3a3a;
+  border-radius: 4px;
+  color: #d4d4d4;
+  font-size: 13px;
+  outline: none;
+  font-weight: 500;
+}
+
+.property-name:focus {
+  border-color: #0e639c;
+}
+
+.property-value {
+  flex: 1;
+  padding: 6px 8px;
+  background: #1e1e1e;
+  border: 1px solid #3a3a3a;
+  border-radius: 4px;
+  color: #d4d4d4;
+  font-size: 13px;
+  outline: none;
+}
+
+.property-value:focus {
+  border-color: #0e639c;
+}
+
+.property-delete {
+  flex: 0 0 32px;
+  height: 28px;
+  background: transparent;
+  border: 1px solid #3a3a3a;
+  border-radius: 4px;
+  color: #d4d4d4;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.property-delete:hover {
+  background: #dc2626;
+  border-color: #dc2626;
+  color: #ffffff;
+}
+
+.add-property-button {
+  width: 100%;
+  padding: 8px;
+  background: transparent;
+  border: 1px dashed #3a3a3a;
+  border-radius: 4px;
+  color: #9a9a9a;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.15s;
+  margin-top: 8px;
+}
+
+.add-property-button:hover {
+  border-color: #0e639c;
+  color: #0e639c;
+  background: rgba(14, 99, 156, 0.1);
+}
+
+/* Save Button */
+.notion-save-button {
+  position: absolute;
+  top: 60px;
+  right: 96px;
+  padding: 8px 16px;
+  background: #0e639c;
+  border: none;
+  border-radius: 6px;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  z-index: 5;
+}
+
+.notion-save-button:hover {
+  background: #1177bb;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(14, 99, 156, 0.3);
+}
+
+.notion-save-button:active {
+  transform: translateY(0);
+}
+
+/* Title Styling */
+.notion-title {
+  width: 100%;
+  font-size: 40px;
+  font-weight: 700;
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  outline: none;
+  padding: 0;
+  margin: 0;
+  line-height: 1.2;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+}
+
+.notion-title::placeholder {
+  color: #4a4a4a;
+}
+
+/* Editor Container */
+.notion-editor-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background: #1e1e1e;
+  position: relative;
+}
+
+.notion-header {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.notion-editor-wrapper {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 96px 60px 96px;
+}
+
+/* Prose Styles */
+.notion-prose-editor {
+  color: #d4d4d4;
+  font-size: 16px;
+  line-height: 1.6;
+  outline: none;
+  min-height: 100%;
+}
+
+.notion-prose-editor p {
+  margin: 8px 0;
+}
+
+.notion-prose-editor h1,
+.notion-prose-editor h2,
+.notion-prose-editor h3 {
+  color: #ffffff;
+  margin: 24px 0 8px 0;
+  font-weight: 600;
+}
+
+.notion-prose-editor h1 {
+  font-size: 32px;
+}
+
+.notion-prose-editor h2 {
+  font-size: 24px;
+}
+
+.notion-prose-editor h3 {
+  font-size: 20px;
+}
+
+.notion-prose-editor code {
+  background: #2a2a2a;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9em;
+  color: #e06c75;
+}
+
+.notion-prose-editor pre {
+  background: #2a2a2a;
+  padding: 16px;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 16px 0;
+}
+
+.notion-prose-editor pre code {
+  background: none;
+  padding: 0;
+  color: #d4d4d4;
+}
+
+.notion-prose-editor ul,
+.notion-prose-editor ol {
+  padding-left: 24px;
+  margin: 8px 0;
+}
+
+.notion-prose-editor li {
+  margin: 4px 0;
+}
+
+.notion-prose-editor blockquote {
+  border-left: 3px solid #3a3a3a;
+  padding-left: 16px;
+  margin: 16px 0;
+  color: #9a9a9a;
+  font-style: italic;
+}
+
+.notion-prose-editor hr {
+  border: none;
+  border-top: 1px solid #3a3a3a;
+  margin: 24px 0;
+}
+
+.notion-prose-editor table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 16px 0;
+}
+
+.notion-prose-editor th,
+.notion-prose-editor td {
+  border: 1px solid #3a3a3a;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.notion-prose-editor th {
+  background: #2a2a2a;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.notion-prose-editor a {
+  color: #2563eb;
+  text-decoration: none;
+}
+
+.notion-prose-editor a:hover {
+  text-decoration: underline;
+}
+
+/* Task Lists */
+.notion-prose-editor ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0;
+}
+
+.notion-prose-editor ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.notion-prose-editor ul[data-type="taskList"] li input[type="checkbox"] {
+  margin-top: 4px;
+  cursor: pointer;
+}
+
+/* Empty Editor Placeholder */
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: #5a5a5a;
+  pointer-events: none;
+  height: 0;
+}

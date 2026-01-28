@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import FileExplorer from './components/FileExplorer';
-import NotionEditorEnhanced from './components/NotionEditorEnhanced';
+import NotionEditorFinal from './components/NotionEditorFinal';
 import { Note, FileItem } from '../shared/types';
 import './styles.css';
 import './file-explorer-styles.css';
@@ -62,7 +62,7 @@ const App: React.FC = () => {
         {loading ? (
           <div className="loading">Loading...</div>
         ) : selectedNote ? (
-          <NotionEditorEnhanced note={selectedNote} onSave={handleSaveNote} />
+          <NotionEditorFinal note={selectedNote} onSave={handleSaveNote} />
         ) : (
           <div className="empty-state">
             <h2>Welcome to InsanusNotes</h2>
