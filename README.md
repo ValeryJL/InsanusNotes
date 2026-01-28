@@ -307,12 +307,14 @@ npm install
 
 ### File/Folder Creation Not Working
 
-**Symptoms:** Clicking create buttons does nothing or shows errors
+**Error:** `prompt() is not supported` or `Uncaught (in promise) Error: prompt() is not supported`
 
-**Solutions:**
-1. Ensure a project is opened (not just app launched)
-2. Check browser console (F12) for JavaScript errors
-3. Check terminal for main process errors
+**This has been fixed!** The app now uses modern React dialogs instead of browser `prompt()` which is blocked in Electron for security.
+
+**If you still have issues:**
+1. Make sure you've pulled the latest code and rebuilt: `npm install && npm run build`
+2. Ensure a project is opened (not just app launched)
+3. Check browser console (F12) for other JavaScript errors
 4. Verify write permissions in project directory
 
 ### Build Fails
