@@ -331,6 +331,12 @@ npm run build
 3. Rebuild native modules: `npm run rebuild`
 4. Check logs in terminal
 
+### D-Bus Warning (Linux Only)
+
+**Warning:** `Failed to call method: org.freedesktop.systemd1.Manager.StartTransientUnit: ... UnitExists`
+
+**This is harmless.** Electron/Chromium shows this warning on Linux systems with systemd when the browser process tries to register but the unit already exists. The app will function normally despite this warning. You can safely ignore it.
+
 ## 🛠️ Development Tips
 
 ### Hot Reload
