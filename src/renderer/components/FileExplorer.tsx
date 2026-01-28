@@ -5,11 +5,18 @@ interface FileExplorerProps {
   onFileSelect: (file: FileItem) => void;
 }
 
+interface DialogState {
+  type: 'file' | 'folder' | 'delete' | null;
+  fileToDelete?: FileItem;
+}
+
 const FileExplorer: React.FC<FileExplorerProps> = ({ onFileSelect }) => {
   const [project, setProject] = useState<ProjectConfig | null>(null);
   const [currentPath, setCurrentPath] = useState<string>('');
   const [files, setFiles] = useState<FileItem[]>([]);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  const [dialogState, setDialogState] = useState<DialogState>({ type: null });
+  const [inputValue, setInputValue] = useState<string>('');
 
   useEffect(() => {
     loadProject();
@@ -76,59 +83,83 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ onFileSelect }) => {
     }
   };
 
-  const handleCreateFile = async () => {
-    const fileName = prompt('Enter file name (with extension):');
-    if (!fileName) return;
-
-    try {
-      if (!currentPath) {
-        alert('Error: No directory selected. Please select a folder first.');
-        return;
-      }
-      
-      const filePath = `${currentPath}/${fileName}`;
-      console.log('Creating file:', filePath);
-      await window.api.files.create(filePath, 'file');
-      await loadFiles(currentPath);
-      console.log('File created successfully');
-    } catch (error) {
-      console.error('Failed to create file:', error);
-      alert(`Failed to create file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  const handleCreateFile = () => {
+    if (!currentPath) {
+      setDialogState({ type: null });
+      // Show error in dialog instead
+      return;
     }
+    setInputValue('');
+    setDialogState({ type: 'file' });
   };
 
-  const handleCreateFolder = async () => {
-    const folderName = prompt('Enter folder name:');
-    if (!folderName) return;
-
-    try {
-      if (!currentPath) {
-        alert('Error: No directory selected. Please select a folder first.');
-        return;
-      }
-      
-      const folderPath = `${currentPath}/${folderName}`;
-      console.log('Creating folder:', folderPath);
-      await window.api.files.create(folderPath, 'directory');
-      await loadFiles(currentPath);
-      console.log('Folder created successfully');
-    } catch (error) {
-      console.error('Failed to create folder:', error);
-      alert(`Failed to create folder: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  const handleCreateFolder = () => {
+    if (!currentPath) {
+      setDialogState({ type: null });
+      // Show error in dialog instead
+      return;
     }
+    setInputValue('');
+    setDialogState({ type: 'folder' });
   };
 
-  const handleDeleteFile = async (file: FileItem, event: React.MouseEvent) => {
+  const handleDeleteFile = (file: FileItem, event: React.MouseEvent) => {
     event.stopPropagation();
-    
-    if (!confirm(`Delete ${file.name}?`)) return;
+    setDialogState({ type: 'delete', fileToDelete: file });
+  };
+
+  const confirmCreate = async () => {
+    if (!inputValue.trim()) return;
 
     try {
-      await window.api.files.delete(file.path);
+      if (!currentPath) {
+        return;
+      }
+
+      const itemPath = `${currentPath}/${inputValue.trim()}`;
+      
+      if (dialogState.type === 'file') {
+        console.log('Creating file:', itemPath);
+        await window.api.files.create(itemPath, 'file');
+        console.log('File created successfully');
+      } else if (dialogState.type === 'folder') {
+        console.log('Creating folder:', itemPath);
+        await window.api.files.create(itemPath, 'directory');
+        console.log('Folder created successfully');
+      }
+      
       await loadFiles(currentPath);
+      setDialogState({ type: null });
+      setInputValue('');
+    } catch (error) {
+      console.error('Failed to create:', error);
+      // Keep dialog open to show error
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!dialogState.fileToDelete) return;
+
+    try {
+      await window.api.files.delete(dialogState.fileToDelete.path);
+      await loadFiles(currentPath);
+      setDialogState({ type: null });
     } catch (error) {
       console.error('Failed to delete file:', error);
-      alert('Failed to delete file');
+      setDialogState({ type: null });
+    }
+  };
+
+  const cancelDialog = () => {
+    setDialogState({ type: null });
+    setInputValue('');
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      confirmCreate();
+    } else if (e.key === 'Escape') {
+      cancelDialog();
     }
   };
 
@@ -188,6 +219,41 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ onFileSelect }) => {
           <div className="empty-folder">Empty folder</div>
         )}
       </div>
+
+      {/* Create File/Folder Dialog */}
+      {(dialogState.type === 'file' || dialogState.type === 'folder') && (
+        <div className="dialog-overlay" onClick={cancelDialog}>
+          <div className="dialog-content" onClick={(e) => e.stopPropagation()}>
+            <h3>{dialogState.type === 'file' ? 'Create New File' : 'Create New Folder'}</h3>
+            <input
+              type="text"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={handleKeyPress}
+              placeholder={dialogState.type === 'file' ? 'filename.md' : 'folder-name'}
+              autoFocus
+            />
+            <div className="dialog-buttons">
+              <button onClick={confirmCreate} className="dialog-btn-primary">Create</button>
+              <button onClick={cancelDialog} className="dialog-btn-secondary">Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {dialogState.type === 'delete' && dialogState.fileToDelete && (
+        <div className="dialog-overlay" onClick={cancelDialog}>
+          <div className="dialog-content" onClick={(e) => e.stopPropagation()}>
+            <h3>Confirm Delete</h3>
+            <p>Are you sure you want to delete <strong>{dialogState.fileToDelete.name}</strong>?</p>
+            <div className="dialog-buttons">
+              <button onClick={confirmDelete} className="dialog-btn-danger">Delete</button>
+              <button onClick={cancelDialog} className="dialog-btn-secondary">Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
