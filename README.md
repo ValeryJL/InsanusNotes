@@ -317,6 +317,16 @@ npm install
 3. Check browser console (F12) for other JavaScript errors
 4. Verify write permissions in project directory
 
+### CSP unsafe-eval Error
+
+**Error:** `Uncaught EvalError: Evaluating a string as JavaScript violates the following Content Security Policy directive because 'unsafe-eval' is not an allowed source of script`
+
+**This has been fixed!** Webpack now uses `inline-source-map` instead of `eval` for development builds, which is compatible with strict CSP.
+
+**If you still have issues:**
+1. Pull latest code and rebuild: `npm install && npm run build`
+2. Clear webpack cache: `rm -rf dist && npm run build`
+
 ### Build Fails
 
 ```bash
