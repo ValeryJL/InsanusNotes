@@ -8,6 +8,7 @@ module.exports = [
     mode: 'development',
     entry: './src/main/main.ts',
     target: 'electron-main',
+    devtool: 'inline-source-map',
     module: {
       rules: [
         {
@@ -39,6 +40,7 @@ module.exports = [
     mode: 'development',
     entry: './src/main/preload.ts',
     target: 'electron-preload',
+    devtool: 'inline-source-map',
     module: {
       rules: [
         {
@@ -61,6 +63,7 @@ module.exports = [
     mode: 'development',
     entry: './src/renderer/renderer.tsx',
     target: 'electron-renderer',
+    devtool: 'inline-source-map', // Use inline-source-map instead of eval to avoid CSP unsafe-eval issues
     module: {
       rules: [
         {
