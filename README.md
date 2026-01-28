@@ -31,6 +31,8 @@ A Linux-first, object-oriented note-taking and knowledge management app for prog
 
 ## Installation
 
+**Important:** After cloning or pulling updates, always run `npm install` to ensure all dependencies are installed.
+
 ```bash
 # Install dependencies
 npm install
@@ -41,6 +43,8 @@ npm run build
 # Start the application
 npm start
 ```
+
+**Troubleshooting:** If you encounter build errors after pulling updates, see [SETUP.md](SETUP.md) for detailed troubleshooting steps.
 
 ## Development
 
