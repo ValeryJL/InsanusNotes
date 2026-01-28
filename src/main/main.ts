@@ -1,22 +1,50 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog } from 'electron';
 import * as path from 'path';
 import { FileSystemWatcher } from './filesystem/watcher';
 import { DatabaseManager } from '../database/manager';
 import { NoteManager } from './notes/manager';
 import { InterfaceManager } from './interfaces/manager';
 import { DataManager } from './data/manager';
+import { ProjectManager } from './projects/manager';
+import { FileManager } from './files/manager';
 
+let projectSelectionWindow: BrowserWindow | null = null;
 let mainWindow: BrowserWindow | null = null;
 let dbManager: DatabaseManager;
-let fileWatcher: FileSystemWatcher;
+let fileWatcher: FileSystemWatcher | null = null;
 let noteManager: NoteManager;
 let interfaceManager: InterfaceManager;
 let dataManager: DataManager;
+let projectManager: ProjectManager;
+let fileManager: FileManager;
 
-function createWindow() {
+function createProjectSelectionWindow() {
+  projectSelectionWindow = new BrowserWindow({
+    width: 800,
+    height: 600,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js')
+    },
+    title: 'InsanusNotes - Select Project'
+  });
+
+  projectSelectionWindow.loadFile(path.join(__dirname, 'renderer/project-selection.html'));
+
+  projectSelectionWindow.on('closed', () => {
+    projectSelectionWindow = null;
+    // If no project was selected, quit the app
+    if (!mainWindow) {
+      app.quit();
+    }
+  });
+}
+
+function createMainWindow() {
   mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
+    width: 1400,
+    height: 900,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -24,8 +52,6 @@ function createWindow() {
     }
   });
 
-  // In production, load the built index.html
-  // In development, this would connect to webpack-dev-server
   mainWindow.loadFile(path.join(__dirname, 'renderer/index.html'));
 
   mainWindow.on('closed', () => {
@@ -33,24 +59,34 @@ function createWindow() {
   });
 }
 
-async function initializeApp() {
+async function initializeProject(projectPath: string) {
+  const project = projectManager.getCurrentProject();
+  if (!project) {
+    throw new Error('No project loaded');
+  }
+
   const userDataPath = app.getPath('userData');
-  const notesPath = path.join(userDataPath, 'notes');
+  const notesPath = projectManager.getProjectNotesPath();
   
-  // Initialize database
-  dbManager = new DatabaseManager(path.join(userDataPath, 'insanus.db'));
+  // Initialize database for this project
+  const dbPath = path.join(project.path, '.insanusnotes.db');
+  dbManager = new DatabaseManager(dbPath);
   await dbManager.initialize();
 
   // Initialize managers
   noteManager = new NoteManager(dbManager, notesPath);
-  interfaceManager = new InterfaceManager(dbManager, notesPath);
-  dataManager = new DataManager(dbManager, notesPath);
+  interfaceManager = new InterfaceManager(dbManager, projectManager.getProjectInterfacesPath());
+  dataManager = new DataManager(dbManager, projectManager.getProjectDataPath());
 
   // Link managers to enable validation
   noteManager.setInterfaceManager(interfaceManager);
 
   // Initialize file system watcher
-  fileWatcher = new FileSystemWatcher(notesPath, {
+  if (fileWatcher) {
+    fileWatcher.stop();
+  }
+  
+  fileWatcher = new FileSystemWatcher(project.path, {
     onNoteChange: (filePath) => noteManager.handleFileChange(filePath),
     onInterfaceChange: (filePath) => interfaceManager.handleFileChange(filePath),
     onDataChange: (filePath) => dataManager.handleFileChange(filePath)
@@ -60,8 +96,12 @@ async function initializeApp() {
 }
 
 app.on('ready', async () => {
-  await initializeApp();
-  createWindow();
+  const userDataPath = app.getPath('userData');
+  projectManager = new ProjectManager(userDataPath);
+  fileManager = new FileManager();
+
+  // Show project selection window
+  createProjectSelectionWindow();
 });
 
 app.on('window-all-closed', () => {
@@ -71,8 +111,8 @@ app.on('window-all-closed', () => {
 });
 
 app.on('activate', () => {
-  if (mainWindow === null) {
-    createWindow();
+  if (!projectSelectionWindow && !mainWindow) {
+    createProjectSelectionWindow();
   }
 });
 
@@ -85,7 +125,131 @@ app.on('quit', () => {
   }
 });
 
-// IPC Handlers
+// Project IPC Handlers
+ipcMain.handle('projects:create', async (_, name: string, projectPath: string) => {
+  try {
+    const project = await projectManager.createProject(name, projectPath);
+    await initializeProject(project.path);
+    
+    // Close project selection window and open main window
+    if (projectSelectionWindow) {
+      projectSelectionWindow.close();
+      projectSelectionWindow = null;
+    }
+    createMainWindow();
+    
+    return project;
+  } catch (error) {
+    console.error('Error creating project:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('projects:open', async (_, projectPath: string) => {
+  try {
+    const project = await projectManager.openProject(projectPath);
+    await initializeProject(project.path);
+    
+    // Close project selection window and open main window
+    if (projectSelectionWindow) {
+      projectSelectionWindow.close();
+      projectSelectionWindow = null;
+    }
+    createMainWindow();
+    
+    return project;
+  } catch (error) {
+    console.error('Error opening project:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('projects:getRecent', async () => {
+  try {
+    return await projectManager.getRecentProjects();
+  } catch (error) {
+    console.error('Error getting recent projects:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('projects:getCurrent', async () => {
+  try {
+    return projectManager.getCurrentProject();
+  } catch (error) {
+    console.error('Error getting current project:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('projects:selectFolder', async () => {
+  try {
+    const result = await dialog.showOpenDialog({
+      properties: ['openDirectory', 'createDirectory']
+    });
+    
+    if (result.canceled || result.filePaths.length === 0) {
+      return null;
+    }
+    
+    return result.filePaths[0];
+  } catch (error) {
+    console.error('Error selecting folder:', error);
+    throw error;
+  }
+});
+
+// File IPC Handlers
+ipcMain.handle('files:list', async (_, dirPath: string) => {
+  try {
+    return await fileManager.listFiles(dirPath);
+  } catch (error) {
+    console.error('Error listing files:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('files:create', async (_, filePath: string, type: 'file' | 'directory') => {
+  try {
+    if (type === 'directory') {
+      await fileManager.createDirectory(filePath);
+    } else {
+      await fileManager.createFile(filePath);
+    }
+  } catch (error) {
+    console.error('Error creating file:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('files:delete', async (_, filePath: string) => {
+  try {
+    await fileManager.deleteFile(filePath);
+  } catch (error) {
+    console.error('Error deleting file:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('files:rename', async (_, oldPath: string, newPath: string) => {
+  try {
+    await fileManager.renameFile(oldPath, newPath);
+  } catch (error) {
+    console.error('Error renaming file:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('files:openExternal', async (_, filePath: string) => {
+  try {
+    await fileManager.openExternal(filePath);
+  } catch (error) {
+    console.error('Error opening file externally:', error);
+    throw error;
+  }
+});
+
+// Note IPC Handlers
 ipcMain.handle('notes:getAll', async () => {
   try {
     return await noteManager.getAllNotes();
@@ -122,6 +286,7 @@ ipcMain.handle('notes:delete', async (_, id: string) => {
   }
 });
 
+// Interface IPC Handlers
 ipcMain.handle('interfaces:getAll', async () => {
   try {
     return await interfaceManager.getAllInterfaces();
@@ -140,6 +305,7 @@ ipcMain.handle('interfaces:getById', async (_, id: string) => {
   }
 });
 
+// Data IPC Handlers
 ipcMain.handle('data:query', async (_, dataId: string, row?: number, col?: string) => {
   try {
     return await dataManager.queryData(dataId, row, col);
@@ -149,9 +315,9 @@ ipcMain.handle('data:query', async (_, dataId: string, row?: number, col?: strin
   }
 });
 
+// Reference resolution IPC Handler
 ipcMain.handle('references:resolve', async (_, reference: string) => {
   try {
-    // Parse and resolve [[Note.prop]] or [[Data.row.col]] references
     const match = reference.match(/\[\[(.+?)\]\]/);
     if (!match) return null;
 
@@ -162,7 +328,6 @@ ipcMain.handle('references:resolve', async (_, reference: string) => {
       const noteId = parts[1];
       const prop = parts[2];
       
-      // Validate noteId to prevent SQL injection
       if (!noteId || typeof noteId !== 'string' || noteId.includes("'") || noteId.includes('"')) {
         console.warn('Invalid noteId in reference:', noteId);
         return null;

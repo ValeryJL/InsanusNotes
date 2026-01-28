@@ -1,105 +1,88 @@
 import React, { useState, useEffect } from 'react';
-import NoteList from './components/NoteList';
+import FileExplorer from './components/FileExplorer';
 import NoteEditor from './components/NoteEditor';
-import { Note } from '../shared/types';
+import { Note, FileItem } from '../shared/types';
 import './styles.css';
+import './file-explorer-styles.css';
 
 const App: React.FC = () => {
-  const [notes, setNotes] = useState<Note[]>([]);
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    loadNotes();
-  }, []);
+  const handleFileSelect = async (file: FileItem) => {
+    if (!file.extension || (file.extension !== '.md' && file.extension !== '.markdown')) {
+      return;
+    }
 
-  const loadNotes = async () => {
     setLoading(true);
     try {
-      const allNotes = await window.api.notes.getAll();
-      setNotes(allNotes);
-    } catch (error) {
-      console.error('Failed to load notes:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSelectNote = async (noteId: string) => {
-    try {
+      // Extract note ID from file name
+      const noteId = file.name.replace(/\.(md|markdown)$/, '');
       const note = await window.api.notes.getById(noteId);
-      setSelectedNote(note);
+      
+      if (note) {
+        setSelectedNote(note);
+      } else {
+        // Create a new note from the file
+        const newNote: Note = {
+          id: noteId,
+          title: noteId,
+          content: '',
+          metadata: {},
+          filePath: file.path,
+          createdAt: Date.now(),
+          updatedAt: Date.now()
+        };
+        setSelectedNote(newNote);
+      }
     } catch (error) {
       console.error('Failed to load note:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleSaveNote = async (note: Note) => {
     try {
       await window.api.notes.save(note);
-      await loadNotes();
       setSelectedNote(note);
     } catch (error) {
       console.error('Failed to save note:', error);
     }
   };
 
-  const handleNewNote = () => {
-    const newNote: Note = {
-      id: `note-${Date.now()}`,
-      title: 'New Note',
-      content: '',
-      metadata: {},
-      filePath: '',
-      createdAt: Date.now(),
-      updatedAt: Date.now()
-    };
-    setSelectedNote(newNote);
-  };
-
-  const handleDeleteNote = async (noteId: string) => {
-    try {
-      await window.api.notes.delete(noteId);
-      await loadNotes();
-      if (selectedNote?.id === noteId) {
-        setSelectedNote(null);
-      }
-    } catch (error) {
-      console.error('Failed to delete note:', error);
-    }
-  };
-
-  if (loading) {
-    return <div className="loading">Loading InsanusNotes...</div>;
-  }
-
   return (
-    <div className="app">
-      <div className="sidebar">
-        <div className="sidebar-header">
-          <h1>InsanusNotes</h1>
-          <button className="btn-new" onClick={handleNewNote}>+ New Note</button>
-        </div>
-        <NoteList
-          notes={notes}
-          selectedNoteId={selectedNote?.id}
-          onSelectNote={handleSelectNote}
-          onDeleteNote={handleDeleteNote}
-        />
+    <div className="app-container">
+      <div className="app-sidebar">
+        <FileExplorer onFileSelect={handleFileSelect} />
       </div>
-      <div className="main-content">
-        {selectedNote ? (
-          <NoteEditor
-            note={selectedNote}
-            onSave={handleSaveNote}
-          />
+      
+      <div className="app-main">
+        {loading ? (
+          <div className="loading">Loading...</div>
+        ) : selectedNote ? (
+          <NoteEditor note={selectedNote} onSave={handleSaveNote} />
         ) : (
           <div className="empty-state">
             <h2>Welcome to InsanusNotes</h2>
-            <p>Select a note or create a new one to get started.</p>
-            <p className="description">
-              A Linux-first, object-oriented note-taking app for programmers and world-builders.
-            </p>
+            <p>Select a file from the explorer or create a new one to get started.</p>
+            <div className="features">
+              <div className="feature">
+                <span className="feature-icon">📝</span>
+                <h3>Markdown Notes</h3>
+                <p>Write notes with YAML frontmatter</p>
+              </div>
+              <div className="feature">
+                <span className="feature-icon">🏗️</span>
+                <h3>Interface Schemas</h3>
+                <p>Define and validate note structure</p>
+              </div>
+              <div className="feature">
+                <span className="feature-icon">📊</span>
+                <p>Query CSV data sources</p>
+                <h3>Dynamic References</h3>
+              </div>
+            </div>
           </div>
         )}
       </div>

@@ -1,5 +1,6 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const CopyWebpackPlugin = require('copy-webpack-plugin');
 
 module.exports = [
   // Main process configuration
@@ -85,6 +86,12 @@ module.exports = [
         template: './src/renderer/index.html',
         filename: 'index.html',
       }),
+      new CopyWebpackPlugin({
+        patterns: [
+          { from: 'src/renderer/project-selection.html', to: 'project-selection.html' },
+          { from: 'src/renderer/project-selection.js', to: 'project-selection.js' }
+        ]
+      })
     ],
   },
 ];

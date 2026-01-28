@@ -37,6 +37,28 @@ export interface DataSource {
   updatedAt: number;
 }
 
+export interface ProjectConfig {
+  name: string;
+  path: string;
+  version: string;
+  createdAt: number;
+  updatedAt: number;
+  description?: string;
+  author?: string;
+  notesPath?: string;
+  interfacesPath?: string;
+  dataPath?: string;
+}
+
+export interface FileItem {
+  name: string;
+  path: string;
+  type: 'file' | 'directory';
+  extension?: string;
+  size?: number;
+  modifiedAt?: number;
+}
+
 // Window API type declaration for renderer process
 export interface InsanusAPI {
   notes: {
@@ -54,6 +76,19 @@ export interface InsanusAPI {
   };
   references: {
     resolve: (reference: string) => Promise<any>;
+  };
+  projects: {
+    create: (name: string, path: string) => Promise<ProjectConfig>;
+    open: (path: string) => Promise<ProjectConfig>;
+    getRecent: () => Promise<ProjectConfig[]>;
+    getCurrent: () => Promise<ProjectConfig | null>;
+  };
+  files: {
+    list: (dirPath: string) => Promise<FileItem[]>;
+    create: (filePath: string, type: 'file' | 'directory') => Promise<void>;
+    delete: (filePath: string) => Promise<void>;
+    rename: (oldPath: string, newPath: string) => Promise<void>;
+    openExternal: (filePath: string) => Promise<void>;
   };
 }
 

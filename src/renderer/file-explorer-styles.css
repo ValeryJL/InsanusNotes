@@ -1,0 +1,223 @@
+/* File Explorer Styles */
+
+.app-container {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.app-sidebar {
+  width: 300px;
+  background: #252525;
+  border-right: 1px solid #3c3c3c;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.app-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #1e1e1e;
+}
+
+.file-explorer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.file-explorer-header {
+  padding: 20px;
+  border-bottom: 1px solid #3c3c3c;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.file-explorer-header h3 {
+  font-size: 16px;
+  color: #ffffff;
+  margin: 0;
+}
+
+.file-explorer-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.file-explorer-actions button {
+  background: #3c3c3c;
+  border: none;
+  color: #d4d4d4;
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background 0.2s;
+}
+
+.file-explorer-actions button:hover {
+  background: #4c4c4c;
+}
+
+.file-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+}
+
+.file-item {
+  display: flex;
+  align-items: center;
+  padding: 10px 12px;
+  margin-bottom: 4px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+  position: relative;
+}
+
+.file-item:hover {
+  background: #2d2d2d;
+}
+
+.file-item.directory {
+  font-weight: 500;
+}
+
+.file-icon {
+  font-size: 18px;
+  margin-right: 10px;
+  min-width: 24px;
+}
+
+.file-name {
+  flex: 1;
+  color: #cccccc;
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-delete {
+  opacity: 0;
+  background: none;
+  border: none;
+  color: #f48771;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 0 8px;
+  transition: opacity 0.2s;
+}
+
+.file-item:hover .file-delete {
+  opacity: 1;
+}
+
+.file-delete:hover {
+  color: #ff6b6b;
+}
+
+.empty-folder {
+  text-align: center;
+  padding: 40px 20px;
+  color: #808080;
+  font-size: 14px;
+}
+
+/* Empty State */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 40px;
+  text-align: center;
+}
+
+.empty-state h2 {
+  font-size: 32px;
+  margin-bottom: 15px;
+  color: #ffffff;
+}
+
+.empty-state > p {
+  font-size: 16px;
+  color: #808080;
+  margin-bottom: 40px;
+  max-width: 600px;
+}
+
+.features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 30px;
+  max-width: 800px;
+  width: 100%;
+}
+
+.feature {
+  background: #252525;
+  padding: 30px;
+  border-radius: 12px;
+  border: 1px solid #3c3c3c;
+  transition: transform 0.2s, border-color 0.2s;
+}
+
+.feature:hover {
+  transform: translateY(-4px);
+  border-color: #0e639c;
+}
+
+.feature-icon {
+  font-size: 48px;
+  display: block;
+  margin-bottom: 15px;
+}
+
+.feature h3 {
+  font-size: 18px;
+  color: #ffffff;
+  margin-bottom: 10px;
+}
+
+.feature p {
+  font-size: 14px;
+  color: #808080;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Loading State */
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-size: 18px;
+  color: #808080;
+}
+
+/* Scrollbar Styles */
+.file-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.file-list::-webkit-scrollbar-track {
+  background: #1e1e1e;
+}
+
+.file-list::-webkit-scrollbar-thumb {
+  background: #4c4c4c;
+  border-radius: 4px;
+}
+
+.file-list::-webkit-scrollbar-thumb:hover {
+  background: #5c5c5c;
+}
