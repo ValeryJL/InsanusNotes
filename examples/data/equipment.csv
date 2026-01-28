@@ -1,0 +1,6 @@
+name,type,damage,cost,rarity
+Elven Longbow,Ranged,45,500,Rare
+Steel Sword,Melee,35,200,Common
+Fire Staff,Magic,60,800,Epic
+Healing Potion,Consumable,0,50,Common
+Mana Crystal,Consumable,0,100,Uncommon

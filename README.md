@@ -54,6 +54,10 @@ npm start
 
 ## Usage
 
+### Quick Start with Examples
+
+The `examples/` directory contains sample interfaces, notes, and data files demonstrating all key features. See [examples/README.md](examples/README.md) for details.
+
 ### Creating Notes
 
 Notes are Markdown files with optional YAML frontmatter:
