@@ -10,7 +10,7 @@ import TaskItem from '@tiptap/extension-task-item';
 import { Strike } from '@tiptap/extension-strike';
 import { Underline } from '@tiptap/extension-underline';
 import { Image } from '@tiptap/extension-image';
-import { Node, mergeAttributes } from '@tiptap/core';
+import { Node, mergeAttributes, textblockTypeInputRule } from '@tiptap/core';
 import { Note } from '../../shared/types';
 
 interface Props {
@@ -75,12 +75,19 @@ const Reference = Node.create({
     return [
       {
         tag: 'span[data-reference]',
+        getAttrs: (node) => {
+          if (typeof node === 'string') return false;
+          const element = node as HTMLElement;
+          return {
+            ref: element.getAttribute('data-ref') || '',
+          };
+        },
       },
     ];
   },
 
-  renderHTML({ HTMLAttributes }) {
-    return ['span', mergeAttributes({ 'data-reference': '' }, HTMLAttributes)];
+  renderHTML({ node, HTMLAttributes }) {
+    return ['span', mergeAttributes({ 'data-reference': '', 'data-ref': node.attrs.ref }, HTMLAttributes)];
   },
 
   addNodeView() {
@@ -225,8 +232,11 @@ const InsanusEditor: React.FC<Props> = ({ note, onSave }) => {
   useEffect(() => {
     if (!editor || !note) return;
 
+    console.log('Loading note content:', note.content?.substring(0, 200));
     const { metadata: parsedMetadata, body } = parseFrontmatter(note.content || '');
+    console.log('After frontmatter parse - body:', body?.substring(0, 200));
     const { title: extractedTitle, content } = extractTitle(body);
+    console.log('After title extract - content:', content?.substring(0, 200));
 
     setTitle(extractedTitle || parsedMetadata.title || note.title || '');
     setMetadata(parsedMetadata);
@@ -360,9 +370,13 @@ const InsanusEditor: React.FC<Props> = ({ note, onSave }) => {
     const { from } = state.selection;
     const bracketPos = state.doc.textBetween(Math.max(0, from - 20), from).lastIndexOf('[[');
     if (bracketPos >= 0) {
+      const deleteFrom = from - (state.doc.textBetween(Math.max(0, from - 20), from).length - bracketPos);
       editor.chain()
-        .deleteRange({ from: from - (state.doc.textBetween(Math.max(0, from - 20), from).length - bracketPos), to: from })
-        .insertContent(`[[${ref}]]`)
+        .deleteRange({ from: deleteFrom, to: from })
+        .insertContent({
+          type: 'reference',
+          attrs: { ref },
+        })
         .run();
     }
     
