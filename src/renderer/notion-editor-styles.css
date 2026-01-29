@@ -1255,3 +1255,91 @@
   flex: 1;
 }
 
+/* Table Controls */
+.table-controls {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #2a2a2a;
+  border: 1px solid #3a3a3a;
+  border-radius: 8px;
+  padding: 8px 12px;
+  display: flex;
+  gap: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  z-index: 100;
+  animation: fadeSlideIn 0.15s ease-out;
+}
+
+.table-btn {
+  background: #373737;
+  border: 1px solid #4a4a4a;
+  border-radius: 4px;
+  padding: 6px 12px;
+  color: #d4d4d4;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.table-btn:hover {
+  background: #444;
+  border-color: #666;
+}
+
+.table-btn.danger {
+  color: #ff6b6b;
+}
+
+.table-btn.danger:hover {
+  background: #442;
+  border-color: #844;
+}
+
+/* Table styling improvements */
+.ProseMirror table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+  margin: 16px 0;
+  overflow: hidden;
+}
+
+.ProseMirror th,
+.ProseMirror td {
+  min-width: 50px;
+  border: 1px solid #3a3a3a;
+  padding: 8px 12px;
+  vertical-align: top;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.ProseMirror th {
+  font-weight: 700;
+  text-align: left;
+  background: #2a2a2a;
+}
+
+.ProseMirror .selectedCell {
+  background: rgba(37, 99, 235, 0.1);
+}
+
+.ProseMirror .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background-color: #2563eb;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.ProseMirror td:hover .column-resize-handle,
+.ProseMirror th:hover .column-resize-handle {
+  opacity: 1;
+}
+

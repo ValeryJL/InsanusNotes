@@ -382,33 +382,87 @@ ipcMain.handle('data:query', async (_, dataId: string, row?: number, col?: strin
 // Reference resolution IPC Handler
 ipcMain.handle('references:resolve', async (_, reference: string) => {
   try {
-    const match = reference.match(/\[\[(.+?)\]\]/);
-    if (!match) return null;
+    // Remove [[ and ]] if present
+    const cleanRef = reference.replace(/^\[\[|\]\]$/g, '');
+    const parts = cleanRef.split('.');
 
-    const parts = match[1].split('.');
-    const type = parts[0];
-
-    if (type === 'Note') {
-      const noteId = parts[1];
-      const prop = parts[2];
+    // Case 1: [[filename]] - just the filename, return title
+    if (parts.length === 1) {
+      const noteId = parts[0];
+      if (!noteId || typeof noteId !== 'string' || noteId.includes("'") || noteId.includes('"')) {
+        console.warn('Invalid noteId in reference:', noteId);
+        return noteId; // Return as-is if invalid
+      }
+      
+      try {
+        const note = await noteManager.getNoteById(noteId);
+        // Return title from metadata or note title
+        return note?.metadata?.title || note?.title || noteId;
+      } catch (error) {
+        // If note not found, return the filename as-is
+        return noteId;
+      }
+    }
+    
+    // Case 2: [[filename.property]] - file with property
+    if (parts.length === 2) {
+      const noteId = parts[0];
+      const prop = parts[1];
       
       if (!noteId || typeof noteId !== 'string' || noteId.includes("'") || noteId.includes('"')) {
         console.warn('Invalid noteId in reference:', noteId);
-        return null;
+        return `${noteId}.${prop}`;
       }
       
-      const note = await noteManager.getNoteById(noteId);
-      return note?.metadata?.[prop];
-    } else if (type === 'Data') {
-      const dataId = parts[1];
-      const row = parseInt(parts[2]);
-      const col = parts[3];
-      return await dataManager.queryData(dataId, row, col);
+      try {
+        const note = await noteManager.getNoteById(noteId);
+        const value = note?.metadata?.[prop];
+        return value !== undefined ? String(value) : '';
+      } catch (error) {
+        return '';
+      }
+    }
+    
+    // Case 3: [[data.row]] or [[data.row.column]] - CSV data
+    if (parts.length >= 3) {
+      const dataId = parts[0];
+      const rowStr = parts[1];
+      const col = parts[2];
+      
+      // Try to parse row as number
+      const row = parseInt(rowStr);
+      if (isNaN(row)) {
+        // Not a CSV reference, might be [[note.property.subproperty]]
+        // For now, treat as note reference and get the first property
+        try {
+          const noteId = parts[0];
+          const prop = parts[1];
+          const note = await noteManager.getNoteById(noteId);
+          const value = note?.metadata?.[prop];
+          return value !== undefined ? String(value) : '';
+        } catch (error) {
+          return '';
+        }
+      }
+      
+      // It's a CSV reference
+      try {
+        if (col) {
+          // [[data.row.column]] - specific cell
+          return await dataManager.queryData(dataId, row, col);
+        } else {
+          // [[data.row]] - first column of row (column index 0)
+          return await dataManager.queryData(dataId, row, '0');
+        }
+      } catch (error) {
+        console.error('Error querying CSV data:', error);
+        return '';
+      }
     }
 
-    return null;
+    return reference; // Fallback to original reference
   } catch (error) {
     console.error('Error resolving reference:', error);
-    throw error;
+    return reference; // Return original on error
   }
 });

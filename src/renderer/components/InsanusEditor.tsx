@@ -151,7 +151,13 @@ const InsanusEditor: React.FC<Props> = ({ note, onSave }) => {
   const editor = useEditor({
     extensions: [
       StarterKit,
-      Table,
+      Table.configure({
+        resizable: true,
+        handleWidth: 5,
+        cellMinWidth: 50,
+        lastColumnResizable: true,
+        allowTableNodeSelection: true,
+      }),
       TableRow,
       TableHeader,
       TableCell,
@@ -489,6 +495,68 @@ const InsanusEditor: React.FC<Props> = ({ note, onSave }) => {
       <div className="editor-content-wrapper">
         <EditorContent editor={editor} className="editor-content" />
       </div>
+
+      {/* Table Controls - Show when cursor is in a table */}
+      {editor?.isActive('table') && (
+        <div className="table-controls">
+          <button
+            onClick={() => editor.chain().focus().addColumnBefore().run()}
+            title="Add column before"
+            className="table-btn"
+          >
+            ⬅️ Column
+          </button>
+          <button
+            onClick={() => editor.chain().focus().addColumnAfter().run()}
+            title="Add column after"
+            className="table-btn"
+          >
+            ➡️ Column
+          </button>
+          <button
+            onClick={() => editor.chain().focus().deleteColumn().run()}
+            title="Delete column"
+            className="table-btn danger"
+          >
+            ❌ Column
+          </button>
+          <button
+            onClick={() => editor.chain().focus().addRowBefore().run()}
+            title="Add row before"
+            className="table-btn"
+          >
+            ⬆️ Row
+          </button>
+          <button
+            onClick={() => editor.chain().focus().addRowAfter().run()}
+            title="Add row after"
+            className="table-btn"
+          >
+            ⬇️ Row
+          </button>
+          <button
+            onClick={() => editor.chain().focus().deleteRow().run()}
+            title="Delete row"
+            className="table-btn danger"
+          >
+            ❌ Row
+          </button>
+          <button
+            onClick={() => editor.chain().focus().toggleHeaderRow().run()}
+            title="Toggle header row"
+            className="table-btn"
+          >
+            📋 Header
+          </button>
+          <button
+            onClick={() => editor.chain().focus().deleteTable().run()}
+            title="Delete table"
+            className="table-btn danger"
+          >
+            🗑️ Table
+          </button>
+        </div>
+      )}
 
       {/* Slash Command Menu */}
       {showSlashMenu && (
