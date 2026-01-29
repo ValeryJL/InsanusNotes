@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import FileExplorer from './components/FileExplorer';
-import NotionEditorFinal from './components/NotionEditorFinal';
+import NotionEditorSimple from './components/NotionEditorSimple';
 import { Note, FileItem } from '../shared/types';
 import './styles.css';
 import './file-explorer-styles.css';
@@ -20,7 +20,7 @@ const App: React.FC = () => {
       // Extract note ID from file name
       const noteId = file.name.replace(/\.(md|markdown)$/, '');
       const note = await window.api.notes.getById(noteId);
-      
+
       if (note) {
         setSelectedNote(note);
       } else {
@@ -57,12 +57,12 @@ const App: React.FC = () => {
       <div className="app-sidebar">
         <FileExplorer onFileSelect={handleFileSelect} />
       </div>
-      
+
       <div className="app-main">
         {loading ? (
           <div className="loading">Loading...</div>
         ) : selectedNote ? (
-          <NotionEditorFinal note={selectedNote} onSave={handleSaveNote} />
+          <NotionEditorSimple note={selectedNote} onSave={handleSaveNote} />
         ) : (
           <div className="empty-state">
             <h2>Welcome to InsanusNotes</h2>

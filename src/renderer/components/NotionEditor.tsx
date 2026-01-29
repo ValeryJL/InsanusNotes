@@ -35,7 +35,7 @@ const NotionEditor: React.FC<NotionEditorProps> = ({ note, onSave }) => {
   const [selectedReferenceIndex, setSelectedReferenceIndex] = useState(0);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
   const [files, setFiles] = useState<FileItem[]>([]);
-  
+
   const titleRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
 
@@ -76,7 +76,7 @@ const NotionEditor: React.FC<NotionEditorProps> = ({ note, onSave }) => {
       attributes: {
         class: 'notion-prose-editor',
       },
-      handleKeyDown: (view, event) => {
+      handleKeyDown: (view: any, event: any) => {
         // Handle command menu navigation
         if (showCommandMenu) {
           if (event.key === 'ArrowDown') {
@@ -133,11 +133,11 @@ const NotionEditor: React.FC<NotionEditorProps> = ({ note, onSave }) => {
     onUpdate: ({ editor: ed }) => {
       const text = ed.getText();
       const { from } = ed.state.selection;
-      
+
       // Detect slash command
       const textBefore = text.slice(Math.max(0, from - 20), from);
       const slashMatch = textBefore.match(/\/([a-z0-9]*)$/i);
-      
+
       if (slashMatch) {
         setCommandSearch(slashMatch[1]);
         setSelectedCommandIndex(0);
@@ -147,7 +147,7 @@ const NotionEditor: React.FC<NotionEditorProps> = ({ note, onSave }) => {
       } else {
         // Detect [[ reference
         const refMatch = textBefore.match(/\[\[([^\]]*?)$/);
-        
+
         if (refMatch) {
           setReferenceSearch(refMatch[1]);
           setSelectedReferenceIndex(0);
@@ -164,11 +164,11 @@ const NotionEditor: React.FC<NotionEditorProps> = ({ note, onSave }) => {
 
   const updateMenuPosition = () => {
     if (!editor || !editorRef.current) return;
-    
+
     const { from } = editor.state.selection;
     const coords = editor.view.coordsAtPos(from);
     const editorRect = editorRef.current.getBoundingClientRect();
-    
+
     setMenuPosition({
       top: coords.top - editorRect.top + 25,
       left: coords.left - editorRect.left,
@@ -259,16 +259,16 @@ const NotionEditor: React.FC<NotionEditorProps> = ({ note, onSave }) => {
 
   const insertReference = (file: FileItem | undefined) => {
     if (!file || !editor) return;
-    
+
     const from = editor.state.selection.from - referenceSearch.length - 2; // -2 for [[
     const to = editor.state.selection.from;
-    
+
     editor.chain()
       .focus()
       .deleteRange({ from, to })
       .insertContent(`[[${file.id}]]`)
       .run();
-    
+
     setShowReferenceMenu(false);
     setReferenceSearch('');
   };
@@ -320,7 +320,7 @@ const NotionEditor: React.FC<NotionEditorProps> = ({ note, onSave }) => {
 
   return (
     <div className="notion-editor">
-      <div 
+      <div
         className="notion-title-container"
         onMouseEnter={() => setShowProperties(true)}
         onMouseLeave={() => setShowProperties(false)}
@@ -333,7 +333,7 @@ const NotionEditor: React.FC<NotionEditorProps> = ({ note, onSave }) => {
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Untitled"
         />
-        
+
         {showProperties && (
           <div className="notion-properties-panel">
             <div className="property-item">
@@ -352,9 +352,9 @@ const NotionEditor: React.FC<NotionEditorProps> = ({ note, onSave }) => {
 
       <div className="notion-editor-content" ref={editorRef}>
         <EditorContent editor={editor} />
-        
+
         {showCommandMenu && filteredCommands.length > 0 && (
-          <div 
+          <div
             className="command-menu"
             style={{ top: menuPosition.top, left: menuPosition.left }}
           >
@@ -376,7 +376,7 @@ const NotionEditor: React.FC<NotionEditorProps> = ({ note, onSave }) => {
         )}
 
         {showReferenceMenu && filteredFiles.length > 0 && (
-          <div 
+          <div
             className="command-menu reference-menu"
             style={{ top: menuPosition.top, left: menuPosition.left }}
           >

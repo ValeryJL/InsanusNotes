@@ -45,7 +45,7 @@ const NotionEditorEnhanced: React.FC<NotionEditorProps> = ({ note, onSave }) => 
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
   const [files, setFiles] = useState<FileItem[]>([]);
   const [saveStatus, setSaveStatus] = useState('');
-  
+
   const titleRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
   const saveTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
@@ -115,19 +115,19 @@ const NotionEditorEnhanced: React.FC<NotionEditorProps> = ({ note, onSave }) => 
       attributes: {
         class: 'notion-prose-editor',
       },
-      handleKeyDown: (view, event) => {
+      handleKeyDown: (view: any, event: any) => {
         // Handle command menu navigation
         if (showCommandMenu) {
           if (event.key === 'ArrowDown') {
             event.preventDefault();
-            setSelectedCommandIndex(i => 
+            setSelectedCommandIndex(i =>
               i < filteredCommands.length - 1 ? i + 1 : 0
             );
             return true;
           }
           if (event.key === 'ArrowUp') {
             event.preventDefault();
-            setSelectedCommandIndex(i => 
+            setSelectedCommandIndex(i =>
               i > 0 ? i - 1 : filteredCommands.length - 1
             );
             return true;
@@ -150,14 +150,14 @@ const NotionEditorEnhanced: React.FC<NotionEditorProps> = ({ note, onSave }) => 
         if (showReferenceMenu) {
           if (event.key === 'ArrowDown') {
             event.preventDefault();
-            setSelectedReferenceIndex(i => 
+            setSelectedReferenceIndex(i =>
               i < filteredFiles.length - 1 ? i + 1 : 0
             );
             return true;
           }
           if (event.key === 'ArrowUp') {
             event.preventDefault();
-            setSelectedReferenceIndex(i => 
+            setSelectedReferenceIndex(i =>
               i > 0 ? i - 1 : filteredFiles.length - 1
             );
             return true;
@@ -186,7 +186,7 @@ const NotionEditorEnhanced: React.FC<NotionEditorProps> = ({ note, onSave }) => 
       const { $from } = selection;
       const text = $from.parent.textContent;
       const beforeCursor = text.slice(0, $from.parentOffset);
-      
+
       // Check for slash command
       const slashMatch = beforeCursor.match(/\/(\w*)$/);
       if (slashMatch) {
@@ -341,16 +341,16 @@ const NotionEditorEnhanced: React.FC<NotionEditorProps> = ({ note, onSave }) => 
 
   const insertReference = (fileId: string) => {
     if (!editor) return;
-    
+
     const from = editor.state.selection.from - referenceSearch.length - 2; // -2 for [[
     const to = editor.state.selection.to;
-    
+
     editor.chain()
       .focus()
       .deleteRange({ from, to })
       .insertContent(`[[${fileId}]]`)
       .run();
-    
+
     setShowReferenceMenu(false);
     setReferenceSearch('');
   };
@@ -381,7 +381,7 @@ const NotionEditorEnhanced: React.FC<NotionEditorProps> = ({ note, onSave }) => 
   return (
     <div className="notion-editor-container">
       <div className="notion-header">
-        <div 
+        <div
           className="notion-title-container"
           onMouseEnter={() => setShowProperties(true)}
           onMouseLeave={() => setShowProperties(false)}
@@ -408,8 +408,8 @@ const NotionEditorEnhanced: React.FC<NotionEditorProps> = ({ note, onSave }) => 
             </div>
           )}
         </div>
-        
-        <button 
+
+        <button
           className="notion-save-button"
           onClick={handleManualSave}
           title="Save (Ctrl+S)"
@@ -423,7 +423,7 @@ const NotionEditorEnhanced: React.FC<NotionEditorProps> = ({ note, onSave }) => 
       </div>
 
       {showCommandMenu && filteredCommands.length > 0 && (
-        <div 
+        <div
           className="notion-command-menu"
           style={{ top: menuPosition.top, left: menuPosition.left }}
         >
@@ -444,7 +444,7 @@ const NotionEditorEnhanced: React.FC<NotionEditorProps> = ({ note, onSave }) => 
       )}
 
       {showReferenceMenu && filteredFiles.length > 0 && (
-        <div 
+        <div
           className="notion-command-menu"
           style={{ top: menuPosition.top, left: menuPosition.left }}
         >
