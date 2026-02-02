@@ -212,7 +212,7 @@ class PropertyInheritanceManager:
         for prop in data.get("properties", []):
             prop_dict[prop["name"]] = {
                 "type": prop["type"],
-                "value": prop["value"]
+                "value": prop.get("value", "")  # Handle interfaces where value may not exist
             }
         
         prop_dict["_is_interface"] = data.get("is_interface", False)

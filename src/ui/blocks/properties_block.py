@@ -173,10 +173,6 @@ class PropertiesBlock(BaseBlock):
         # Create delete button
         del_btn = QPushButton("x")
         del_btn.setObjectName("PropDelButton")
-        
-        # En interfaces, ocultar botón de eliminación
-        if self.interface_mode or self.is_interface:
-            del_btn.hide()
 
         # Create separator
         sep = QFrame()
@@ -463,7 +459,11 @@ class PropertiesBlock(BaseBlock):
             # En interfaces, no cargar valores - siempre pasar vacío
             value_to_use = "" if (self.interface_mode or self.is_interface) else prop["value"]
             self.add_prop_row(prop["name"], value_to_use, prop["type"])
-            if prop["inherit"] and self.rows:
+            # Solo marcar como heredada si:
+            # 1. El flag inherit es true
+            # 2. NO estamos en modo interfaz (interfaces propias no tienen herencia)
+            # 3. Hay una implementación (impl_val)
+            if prop["inherit"] and self.rows and not (self.interface_mode or self.is_interface) and impl_val:
                 self._mark_row_as_inherited(self.rows[-1], from_interface=parent_is_interface)
         
         # Handle new properties from parent
