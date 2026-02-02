@@ -433,7 +433,7 @@ class PropertiesBlock(BaseBlock):
         for prop in properties_to_add:
             self.add_prop_row(prop["name"], prop["value"], prop["type"])
             if prop["inherit"] and self.rows:
-                self._mark_row_as_inherited(self.rows[-1])
+                self._mark_row_as_inherited(self.rows[-1], from_interface=parent_is_interface)
         
         # Handle new properties from parent
         if new_parent_properties:
@@ -454,6 +454,9 @@ class PropertiesBlock(BaseBlock):
         non_conflicts = []
         
         row_by_name = {row.key_edit.text().strip(): row for row in self.rows}
+        
+        # Determine if parent is interface
+        parent_is_interface = any(p.get("is_interface", False) for p in new_properties)
         
         for prop in new_properties:
             if prop["name"] in row_by_name:
@@ -486,7 +489,7 @@ class PropertiesBlock(BaseBlock):
                 self.add_prop_row(prop["name"], prop["value"], prop["type"])
             
             if self.rows:
-                self._mark_row_as_inherited(self.rows[-1])
+                self._mark_row_as_inherited(self.rows[-1], from_interface=parent_is_interface)
         
         # Handle conflicts
         if conflicts:
@@ -502,7 +505,7 @@ class PropertiesBlock(BaseBlock):
                         self._update_row_value(row, conflict["parent_value"])
                     
                     # Mark as inherited either way
-                    self._mark_row_as_inherited(row)
+                    self._mark_row_as_inherited(row, from_interface=parent_is_interface)
             else:
                 # User wants to remove Implementa
                 for row in self.rows:
@@ -709,6 +712,13 @@ class PropertiesBlock(BaseBlock):
     
     def _apply_conflict_resolutions(self, resolutions: Dict[str, str], conflicts: List[Dict], file_path: str):
         """Apply user's conflict resolutions."""
+        # Determine if inheriting from interface
+        from pathlib import Path
+        from_interface = False
+        if self.project_path and file_path:
+            full_path = Path(self.project_path) / file_path
+            from_interface = full_path.suffix == ".inin" if full_path.exists() else False
+        
         for conflict in conflicts:
             name = conflict["name"]
             resolution = resolutions.get(name, "keep")
@@ -719,13 +729,13 @@ class PropertiesBlock(BaseBlock):
                     if row.key_edit.text().strip() == name:
                         self._update_row_value(row, conflict["parent_value"])
                         # Mark as inherited
-                        self._mark_row_as_inherited(row)
+                        self._mark_row_as_inherited(row, from_interface=from_interface)
                         break
             elif resolution == "keep":
                 # Just mark as inherited but keep current value
                 for row in self.rows:
                     if row.key_edit.text().strip() == name:
-                        self._mark_row_as_inherited(row)
+                        self._mark_row_as_inherited(row, from_interface=from_interface)
                         break
         
         # Now sync any additional properties from parent
@@ -1035,17 +1045,62 @@ class PropertiesBlock(BaseBlock):
                 self.rows.remove(row_data)
         self.inherited_properties.clear()
 
-    def _mark_row_as_inherited(self, row_data: PropertyRowData):
-        """Mark a property row as inherited (read-only, styled)."""
+    def _mark_row_as_inherited(self, row_data: PropertyRowData, from_interface: bool = None):
+        """
+        Mark a property row as inherited.
+        
+        Args:
+            row_data: The row to mark as inherited
+            from_interface: Whether inheriting from interface (if None, auto-detect)
+        
+        Behavior depends on source and type:
+        - Name and type are always read-only
+        - Value handling:
+          * From interface: value is editable
+          * From note: value is read-only for non-arrays
+          * Arrays: items remain editable (can modify/delete items)
+        """
         row_data.inherited = True
         row_data.key_edit.setReadOnly(True)
         row_data.key_edit.setStyleSheet("background-color: #1a1a2e; color: #888888;")
         
+        # Type is always read-only when inherited
         if row_data.type_combo:
             row_data.type_combo.setEnabled(False)
             row_data.type_combo.setStyleSheet("background-color: #1a1a2e; color: #888888;")
+        
+        # Determine if inheriting from interface
+        if from_interface is None:
+            # Try to auto-detect based on current Implementa value
+            impl_val = ""
+            for row in self.rows:
+                if row.key_edit.text() == "Implementa":
+                    if hasattr(row.value_widget, "text"):
+                        impl_val = row.value_widget.text().strip()
+                    break
             
-        # Hide delete button
+            if impl_val and self.project_path:
+                from pathlib import Path
+                full_path = Path(self.project_path) / impl_val
+                from_interface = full_path.suffix == ".inin" if full_path.exists() else False
+            else:
+                from_interface = False
+        
+        # Value editing depends on context
+        if not isinstance(row_data.value_widget, ArrayItemsWidget):
+            # Non-array values
+            if not from_interface and not self.is_interface:
+                # Inheriting from note to note - make value read-only
+                if hasattr(row_data.value_widget, "setReadOnly"):
+                    row_data.value_widget.setReadOnly(True)
+                elif hasattr(row_data.value_widget, "setEnabled"):
+                    row_data.value_widget.setEnabled(False)
+            # else: from interface or to interface - value stays editable
+            
+        # Arrays remain fully editable for their items regardless of source
+        # (the property itself is inherited, but contents can be modified)
+            
+        # Hide delete button - inherited properties cannot be deleted
         for i in range(row_data.header_layout.count()):
             widget = row_data.header_layout.itemAt(i).widget()
             if widget and isinstance(widget, QPushButton) and widget.text() == "x":
