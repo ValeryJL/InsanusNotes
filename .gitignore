@@ -8,3 +8,6 @@ build/
 .idea/
 *.db
 *.db-journal
+.old/
+venv/
+__pycache__/

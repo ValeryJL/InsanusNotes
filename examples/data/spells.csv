@@ -1,6 +1,0 @@
-spell,mana_cost,damage,level,school
-Fireball,50,75,5,Evocation
-Ice Shard,30,45,3,Evocation
-Heal,40,0,2,Restoration
-Lightning Bolt,60,90,7,Evocation
-Shield,25,0,1,Abjuration

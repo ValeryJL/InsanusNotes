@@ -1,0 +1,1 @@
+"""Módulo principal de lógica de negocio"""

@@ -1,0 +1,345 @@
+import json
+from pathlib import Path
+from typing import Dict, Optional
+
+class ThemeManager:
+    """Gestiona la apariencia visual de la aplicación mediante QSS dinámico"""
+    
+    def __init__(self):
+        self.themes_path = Path(__file__).parent / "themes.json"
+        self.themes = self._load_themes()
+        self.current_theme_id = "insanus_dark"
+    
+    def _load_themes(self) -> Dict:
+        if self.themes_path.exists():
+            with open(self.themes_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        return {}
+    
+    def get_theme(self, theme_id: str) -> Optional[Dict]:
+        return self.themes.get(theme_id)
+    
+    def get_current_theme(self) -> Dict:
+        theme = self.themes.get(self.current_theme_id)
+        if not theme:
+            theme = self.themes.get("insanus_dark", {})
+        return theme if theme else {}
+
+    def set_theme(self, theme_id: str):
+        if theme_id in self.themes:
+            self.current_theme_id = theme_id
+
+    def generate_qss(self) -> str:
+        """Genera el estilo QSS basado en el tema actual"""
+        theme = self.get_current_theme()
+        c = theme["colors"]
+        
+        # Plantilla QSS base
+        qss = f"""
+        QMainWindow, QDialog {{
+            background-color: {c['background_primary']};
+            color: {c['text_main']};
+        }}
+        
+        QWidget {{
+            color: {c['text_main']};
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+        }}
+        
+        QSplitter::handle {{
+            background-color: {c['border']};
+        }}
+        
+        /* Sidebar / Explorer */
+        QTreeView {{
+            background-color: {c['background_sidebar']};
+            border: none;
+            border-right: 1px solid {c['border']};
+            color: {c['text_main']};
+            outline: none;
+        }}
+        
+        QTreeView::item {{
+            padding: 4px;
+        }}
+        
+        QTreeView::item:hover {{
+            background-color: {c['block_hover']};
+        }}
+        
+        QTreeView::item:selected {{
+            background-color: {c['accent']};
+            color: white;
+        }}
+
+        /* Sidebar Header */
+        #SidebarHeader {{
+            border-bottom: 1px solid {c['border']};
+            background-color: {c['background_sidebar']};
+        }}
+
+        #SidebarProjectName {{
+            color: {c['text_main']};
+            font-weight: bold;
+            font-size: 12px;
+            letter-spacing: 1px;
+        }}
+
+        /* Botón de añadir item (+) */
+        QPushButton#BtnAddItem {{
+            border: none;
+            border-radius: 4px;
+            background-color: transparent;
+            color: {c['text_main']};
+            font-weight: bold;
+            font-size: 18px;
+        }}
+
+        QPushButton#BtnAddItem:hover {{
+            background-color: {c['block_hover']};
+            color: {c['accent']};
+        }}
+
+        /* Menú Bar */
+        QMenuBar {{
+            background-color: {c['background_primary']};
+            border-bottom: 1px solid {c['border']};
+            color: {c['text_main']};
+        }}
+        
+        QMenuBar::item {{
+            background-color: transparent;
+            padding: 5px 10px;
+        }}
+        
+        QMenuBar::item:selected {{
+            background-color: {c['block_hover']};
+            border-radius: 4px;
+        }}
+
+        /* Menús */
+        QMenu {{
+            background-color: {c['background_secondary']};
+            border: 1px solid {c['border']};
+            padding: 5px;
+            border-radius: 4px;
+            color: {c['text_main']};
+        }}
+        
+        QMenu::item {{
+            padding: 5px 20px;
+            border-radius: 4px;
+        }}
+        
+        QMenu::item:selected {{
+            background-color: {c['accent']};
+            color: white;
+        }}
+        
+        QMenu::separator {{
+            height: 1px;
+            background: {c['border']};
+            margin: 5px 0px;
+        }}
+
+        /* Status Bar */
+        QStatusBar {{
+            background-color: {c['background_sidebar']};
+            color: {c['text_muted']};
+            border-top: 1px solid {c['border']};
+        }}
+        
+        /* Editor Area */
+        QScrollArea {{
+            background-color: {c['background_primary']};
+            border: none;
+        }}
+        
+        #EditorCanvas {{
+            background-color: {c['background_primary']};
+        }}
+        
+        #EditorCenteringWidget {{
+            background-color: {c['background_primary']};
+        }}
+        
+        /* Bloques */
+        QLineEdit#TitleBlock {{
+            font-size: 32px;
+            font-weight: bold;
+            background: transparent;
+            border: none;
+            padding: 10px 0px;
+            color: {c['text_main']};
+        }}
+        
+        #PropertiesPanel {{
+            background-color: transparent;
+            margin: 10px 0px;
+        }}
+        
+        /* Inputs genéricos */
+        QLineEdit, QTextEdit {{
+            background-color: transparent;
+            border: 1px solid transparent;
+            selection-background-color: {c['accent']};
+            color: {c['text_main']};
+        }}
+
+        /* Properties Block Specifics */
+        QPushButton#PropToggleButton {{
+            text-align: left;
+            font-weight: bold;
+            color: {c['text_muted']};
+            font-size: 10px;
+            letter-spacing: 1px;
+            border: none;
+            background: transparent;
+        }}
+        QPushButton#PropToggleButton:hover {{ color: {c['text_main']}; }}
+
+        QLineEdit#PropKey {{
+            color: {c['text_muted']};
+            background-color: {c['background_secondary']};
+            border: 1px solid {c['border']};
+            border-radius: 4px;
+            padding: 4px 6px;
+            color: {c['text_main']};
+        }}
+        
+        QLineEdit#PropValue {{
+            color: {c['text_main']};
+            background-color: {c['background_secondary']};
+            border: 1px solid {c['border']};
+            border-radius: 4px;
+            padding: 4px 6px;
+        }}
+
+        QPushButton#PropAddButton {{
+            border: none;
+            color: {c['text_main']};
+            font-weight: bold;
+            font-size: 16px;
+            background: transparent;
+        }}
+        QPushButton#PropAddButton:hover {{
+            color: {c['accent']};
+            background: {c['block_hover']};
+            border-radius: 3px;
+        }}
+
+        QPushButton#PropDelButton {{
+            border: none;
+            color: {c['text_main']};
+            font-weight: bold;
+            font-size: 16px;
+            background: transparent;
+        }}
+        QPushButton#PropDelButton:hover {{ color: #dc3545; }}
+
+        /* Separadores entre columnas en filas de propiedades/items */
+        QFrame#ItemSeparator {{
+            background-color: {c['border']};
+            min-width: 1px;
+            max-width: 1px;
+            margin: 0 8px;
+        }}
+
+        /* Botones pequeños usados dentro de filas */
+        QPushButton#SmallButton {{
+            background-color: transparent;
+            border: 1px solid transparent;
+            color: {c['text_muted']};
+            font-weight: bold;
+            font-size: 12px;
+            min-width: 24px;
+            min-height: 24px;
+            border-radius: 4px;
+        }}
+        QPushButton#SmallButton:hover {{
+            color: {c['text_main']};
+            background-color: {c['block_hover']};
+            border-color: rgba(255,255,255,0.03);
+        }}
+
+        /* Toggle específico para arreglos: color según estado expandido */
+        QPushButton#SmallToggle {{
+            color: {c['text_main']};
+            background-color: transparent;
+            border: 1px solid rgba(255,255,255,0.02);
+            border-radius: 4px;
+            padding: 2px;
+        }}
+        QPushButton#SmallToggle[expanded="true"] {{
+            color: {c['accent']};
+            background-color: {c['block_hover']};
+        }}
+        QPushButton#SmallToggle[expanded="false"] {{
+            color: {c['text_muted']};
+            background-color: transparent;
+        }}
+        QPushButton#SmallToggle:hover {{
+            color: {c['text_main']};
+            background-color: {c['block_hover']};
+        }}
+
+        /* Estilo para los selectores de tipo en filas (PropType) */
+        QComboBox#PropType {{
+            color: {c['text_muted']};
+            background-color: transparent;
+            border: none;
+            font-size: 10px;
+            padding: 2px 4px;
+        }}
+        QComboBox#PropType::drop-down {{
+            subcontrol-origin: padding;
+            subcontrol-position: top right;
+            width: 18px;
+            border: none;
+            background: transparent;
+        }}
+        QComboBox#PropType QAbstractItemView {{
+            background-color: {c['background_secondary']};
+            color: {c['text_main']};
+            selection-background-color: {c['accent']};
+        }}
+
+        
+        /* Botones */
+        QPushButton {{
+            background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 rgba(255,255,255,0.02), stop:1 {c['background_secondary']});
+            border: 1px solid {c['border']};
+            border-radius: 6px;
+            padding: 5px 12px;
+            color: {c['text_main']};
+            font-family: 'Inter', 'Segoe UI', 'Noto Color Emoji', 'Segoe UI Emoji', sans-serif;
+        }}
+
+        QPushButton:hover {{
+            background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 rgba(255,255,255,0.03), stop:1 {c['block_hover']});
+            border-color: {c['accent']};
+        }}
+
+        QPushButton:pressed {{
+            background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 rgba(0,0,0,0.04), stop:1 {c['background_secondary']});
+            margin-top: 1px;
+        }}
+        
+        QScrollBar:vertical {{
+            border: none;
+            background: {c['background_primary']};
+            width: 10px;
+            margin: 0px;
+        }}
+        
+        QScrollBar::handle:vertical {{
+            background: {c['border']};
+            min-height: 20px;
+            border-radius: 5px;
+        }}
+        
+        QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
+            height: 0px;
+        }}
+        """
+        return qss
