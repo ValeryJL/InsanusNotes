@@ -1,0 +1,16 @@
+{
+    "types": [
+        "Texto",
+        "Booleano",
+        "Número",
+        "Lista",
+        "Arreglo"
+    ],
+    "list_placeholder": "+ Agregar opción...",
+    "array_item_types": [
+        "Texto",
+        "Booleano",
+        "Número",
+        "Lista"
+    ]
+}
