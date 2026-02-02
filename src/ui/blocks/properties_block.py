@@ -589,7 +589,7 @@ class PropertiesBlock(BaseBlock):
         
         Returns dict with:
         - has_conflicts: bool
-        - name_only_conflicts: list of names that conflict (different types)
+        - type_conflicts: list of dicts for same name, different type conflicts
         - type_matching_conflicts: list of dicts with full data for same-type conflicts
         """
         parent_props = self.inheritance_manager.get_full_inherited_properties(file_path)
@@ -597,8 +597,8 @@ class PropertiesBlock(BaseBlock):
         
         result = {
             "has_conflicts": False,
-            "name_only_conflicts": [],
-            "type_matching_conflicts": []
+            "type_conflicts": [],  # Different types - need special handling
+            "type_matching_conflicts": []  # Same type - can be merged
         }
         
         for row in self.rows:
@@ -625,8 +625,15 @@ class PropertiesBlock(BaseBlock):
                         "parent_value": parent_props[name]["value"]
                     })
                 else:
-                    # Different type - name-only conflict
-                    result["name_only_conflicts"].append(name)
+                    # Different type - requires special handling
+                    local_value = self._get_row_value(row)
+                    result["type_conflicts"].append({
+                        "name": name,
+                        "local_type": local_type,
+                        "local_value": local_value,
+                        "parent_type": parent_type,
+                        "parent_value": parent_props[name]["value"]
+                    })
         
         return result
     
@@ -640,41 +647,47 @@ class PropertiesBlock(BaseBlock):
     
     def _handle_inheritance_conflicts(self, widget: QLineEdit, file_path: str, conflicts_info: Dict):
         """Handle conflicts when setting up inheritance."""
-        from .conflict_dialog import SimpleConflictDialog, ConflictResolutionDialog
+        from .conflict_dialog import TypeConflictResolutionDialog, ConflictResolutionDialog
         
-        # If there are name-only conflicts (different types), show simple dialog
-        if conflicts_info["name_only_conflicts"]:
-            all_conflicts = conflicts_info["name_only_conflicts"] + [c["name"] for c in conflicts_info["type_matching_conflicts"]]
-            
-            dialog = SimpleConflictDialog(all_conflicts, self, allow_cancel=True)
+        # Handle type conflicts (different types) first with specialized dialog
+        if conflicts_info["type_conflicts"]:
+            dialog = TypeConflictResolutionDialog(conflicts_info["type_conflicts"], self)
             if dialog.exec():
-                action = dialog.get_action()
+                resolutions = dialog.get_resolutions()
                 
-                if action == "cancel":
-                    widget.setText("")
-                    self._clear_inherited_properties()
-                    widget.setStyleSheet("")
-                    self.has_inheritance_errors = False
-                    return
+                # Process type conflict resolutions
+                for conflict in conflicts_info["type_conflicts"]:
+                    name = conflict["name"]
+                    resolution = resolutions.get(name, {"action": "delete"})
+                    
+                    if resolution["action"] == "delete":
+                        # Delete local property
+                        self._delete_conflicting_properties([name])
+                    
+                    elif resolution["action"] == "rename":
+                        # Rename local property
+                        new_name = resolution.get("new_name", f"{name}_local")
+                        for row in self.rows:
+                            if row.key_edit.text().strip() == name:
+                                row.key_edit.setText(new_name)
+                                break
+                    
+                    elif resolution["action"] == "overwrite":
+                        # Delete local, will be replaced by parent version
+                        self._delete_conflicting_properties([name])
                 
-                elif action == "delete":
-                    # Delete conflicting properties
-                    self._delete_conflicting_properties(all_conflicts)
-                    widget.setStyleSheet("")
-                    self.has_inheritance_errors = False
+                # After handling type conflicts, continue with inheritance
+                widget.setStyleSheet("")
+                self.has_inheritance_errors = False
+                
+                # Now handle type-matching conflicts if any
+                if conflicts_info["type_matching_conflicts"]:
+                    self._show_conflict_resolution_dialog(widget, file_path, conflicts_info["type_matching_conflicts"])
+                else:
                     self._sync_inherited_properties(file_path)
-                    return
-                
-                elif action == "handle":
-                    # Only show conflict resolution for type-matching conflicts
-                    if conflicts_info["type_matching_conflicts"]:
-                        self._show_conflict_resolution_dialog(widget, file_path, conflicts_info["type_matching_conflicts"])
-                    # Still need to delete name-only conflicts
-                    if conflicts_info["name_only_conflicts"]:
-                        self._delete_conflicting_properties(conflicts_info["name_only_conflicts"])
-                    return
+                return
             else:
-                # Dialog was cancelled
+                # User cancelled - clear inheritance
                 widget.setText("")
                 self._clear_inherited_properties()
                 widget.setStyleSheet("")
@@ -1053,12 +1066,14 @@ class PropertiesBlock(BaseBlock):
             row_data: The row to mark as inherited
             from_interface: Whether inheriting from interface (if None, auto-detect)
         
-        Behavior depends on source and type:
-        - Name and type are always read-only
-        - Value handling:
-          * From interface: value is editable
-          * From note: value is read-only for non-arrays
-          * Arrays: items remain editable (can modify/delete items)
+        Behavior:
+        - Name and type are always read-only (inherited properties cannot change identity)
+        - Values are ALWAYS EDITABLE (content can be modified locally)
+        - Parent changes do NOT automatically update child values
+        - Arrays: items remain fully editable
+        
+        Note: When inheriting from notes, the initial value is copied but then
+        becomes independent. Changes in the parent do not propagate to children.
         """
         row_data.inherited = True
         row_data.key_edit.setReadOnly(True)
@@ -1069,35 +1084,10 @@ class PropertiesBlock(BaseBlock):
             row_data.type_combo.setEnabled(False)
             row_data.type_combo.setStyleSheet("background-color: #1a1a2e; color: #888888;")
         
-        # Determine if inheriting from interface
-        if from_interface is None:
-            # Try to auto-detect based on current Implementa value
-            impl_val = ""
-            for row in self.rows:
-                if row.key_edit.text() == "Implementa":
-                    if hasattr(row.value_widget, "text"):
-                        impl_val = row.value_widget.text().strip()
-                    break
-            
-            if impl_val and self.project_path:
-                from pathlib import Path
-                full_path = Path(self.project_path) / impl_val
-                from_interface = full_path.suffix == ".inin" if full_path.exists() else False
-            else:
-                from_interface = False
-        
-        # Value editing depends on context
-        if not isinstance(row_data.value_widget, ArrayItemsWidget):
-            # Non-array values
-            if not from_interface and not self.is_interface:
-                # Inheriting from note to note - make value read-only
-                if hasattr(row_data.value_widget, "setReadOnly"):
-                    row_data.value_widget.setReadOnly(True)
-                elif hasattr(row_data.value_widget, "setEnabled"):
-                    row_data.value_widget.setEnabled(False)
-            # else: from interface or to interface - value stays editable
-            
-        # Arrays remain fully editable for their items regardless of source
+        # VALUES ARE ALWAYS EDITABLE
+        # Content is inherited but can be modified locally
+        # Parent changes do not automatically update child
+        # Arrays remain fully editable for their items
         # (the property itself is inherited, but contents can be modified)
             
         # Hide delete button - inherited properties cannot be deleted
