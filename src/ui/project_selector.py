@@ -113,15 +113,9 @@ class ProjectSelector(QDialog):
         )
         
         if folder_path:
-            # Verificar que la carpeta esté vacía
-            if any(Path(folder_path).iterdir()):
-                self.show_error("La carpeta no está vacía", "Por favor selecciona una carpeta vacía para crear el proyecto.")
-                return
-            
             # Preguntar nombre del proyecto
             project_name, ok = QInputDialog.getText(self, "Nombre del Proyecto", "Nombre:")
             if ok and project_name.strip():
-                project_path = Path(folder_path) / project_name.strip()
                 try:
                     project = self.project_manager.create_project(Path(folder_path), project_name.strip())
                     self.project_selected.emit(project.path)
