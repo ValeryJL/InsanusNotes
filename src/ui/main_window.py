@@ -1,3 +1,10 @@
+"""
+Ventana principal de la aplicación InsanusNotes.
+
+Este módulo contiene la ventana principal que gestiona la navegación entre proyectos,
+archivos, y la interfaz del editor.
+"""
+
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
                              QSplitter, QTreeView, QScrollArea, QFrame, QLabel,
                              QStatusBar, QInputDialog, QMessageBox, QPushButton,
@@ -14,12 +21,34 @@ from .interface_canvas import InterfaceCanvas
 from .theme_manager import ThemeManager
 from .trash_dialog import TrashDialog
 from .file_icon_provider import CustomFileIconProvider
-from pathlib import Path
 
 class MainWindow(QMainWindow):
-    """Ventana principal de InsanusNotes"""
+    """
+    Ventana principal de InsanusNotes.
+    
+    Gestiona la interfaz completa de la aplicación, incluyendo:
+    - Selector de proyectos
+    - Navegación de archivos
+    - Canvas del editor
+    - Menús y atajos de teclado
+    - Auto-guardado
+    - Gestión de temas
+    
+    Attributes:
+        project_manager: Gestor de proyectos activo
+        theme_manager: Gestor de temas de la interfaz
+        save_timer: Timer para auto-guardado con debouncing
+        current_project_path: Ruta al proyecto actualmente abierto
+        current_file_path: Ruta al archivo actualmente abierto
+    """
     
     def __init__(self, project_manager):
+        """
+        Inicializa la ventana principal.
+        
+        Args:
+            project_manager: Instancia de ProjectManager para gestionar proyectos
+        """
         super().__init__()
         self.project_manager = project_manager
         self.theme_manager = ThemeManager()
@@ -42,7 +71,13 @@ class MainWindow(QMainWindow):
         self.show_project_selector()
 
     def create_menu_bar(self):
-        """Crea la barra de menú principal"""
+        """
+        Crea la barra de menú principal.
+        
+        Configura todos los menús de la aplicación:
+        - Menú Archivo (nuevo/abrir proyecto, salir)
+        - Menú Ver (temas)
+        """
         menubar = self.menuBar()
         
         # --- Menú Archivo ---

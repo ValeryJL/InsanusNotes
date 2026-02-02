@@ -1,36 +1,96 @@
+"""
+Gestor de temas para la interfaz de InsanusNotes.
+
+Este módulo gestiona la carga y aplicación de temas visuales mediante
+hojas de estilo QSS (Qt Style Sheets) dinámicas.
+"""
+
 import json
 from pathlib import Path
 from typing import Dict, Optional
 
 class ThemeManager:
-    """Gestiona la apariencia visual de la aplicación mediante QSS dinámico"""
+    """
+    Gestiona la apariencia visual de la aplicación mediante QSS dinámico.
+    
+    Lee temas desde un archivo JSON y genera estilos QSS personalizados
+    para todos los componentes de la interfaz.
+    
+    Attributes:
+        themes_path: Ruta al archivo de definición de temas
+        themes: Diccionario con todos los temas disponibles
+        current_theme_id: ID del tema actualmente activo
+    """
     
     def __init__(self):
+        """Inicializa el gestor de temas con el tema oscuro por defecto."""
         self.themes_path = Path(__file__).parent / "themes.json"
         self.themes = self._load_themes()
         self.current_theme_id = "insanus_dark"
     
     def _load_themes(self) -> Dict:
+        """
+        Carga los temas desde el archivo JSON.
+        
+        Returns:
+            Diccionario con las definiciones de temas
+        """
         if self.themes_path.exists():
             with open(self.themes_path, 'r', encoding='utf-8') as f:
                 return json.load(f)
         return {}
     
     def get_theme(self, theme_id: str) -> Optional[Dict]:
+        """
+        Obtiene la definición de un tema específico.
+        
+        Args:
+            theme_id: Identificador del tema
+            
+        Returns:
+            Diccionario con la definición del tema, o None si no existe
+        """
         return self.themes.get(theme_id)
     
     def get_current_theme(self) -> Dict:
+        """
+        Obtiene el tema actualmente seleccionado.
+        
+        Returns:
+            Diccionario con la definición del tema actual
+            
+        Note:
+            Si el tema actual no existe, retorna el tema oscuro por defecto.
+        """
         theme = self.themes.get(self.current_theme_id)
         if not theme:
             theme = self.themes.get("insanus_dark", {})
         return theme if theme else {}
 
     def set_theme(self, theme_id: str):
+        """
+        Establece el tema activo.
+        
+        Args:
+            theme_id: Identificador del tema a activar
+            
+        Note:
+            Solo establece el tema si existe en la lista de temas disponibles.
+        """
         if theme_id in self.themes:
             self.current_theme_id = theme_id
 
     def generate_qss(self) -> str:
-        """Genera el estilo QSS basado en el tema actual"""
+        """
+        Genera el estilo QSS completo basado en el tema actual.
+        
+        Returns:
+            String con el código QSS para aplicar a la aplicación
+            
+        Note:
+            Esta función genera CSS personalizado para todos los widgets
+            de la aplicación, incluyendo ventanas, menús, bloques, etc.
+        """
         theme = self.get_current_theme()
         c = theme["colors"]
         
