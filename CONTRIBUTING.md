@@ -63,6 +63,41 @@ src/
 │   ├── blocks/     # Bloques del editor
 │   └── widgets/    # Widgets personalizados
 └── utils/          # Utilidades y helpers
+    ├── platform_paths.py      # Gestión de rutas multiplataforma
+    ├── platform_utils.py      # Detección de SO
+    ├── config_manager.py      # Configuración global
+    ├── integrity_checker.py   # Validación de proyectos
+    └── json_io.py             # Operaciones I/O JSON
+```
+
+### Compatibilidad Multiplataforma
+
+InsanusNotes soporta Windows, macOS y Linux. Al contribuir, ten en cuenta:
+
+- **Rutas**: Usar `pathlib.Path` en lugar de strings de rutas
+- **Directorios**: Usar `PlatformPaths` para acceder a directorios estándar del SO
+- **SO-específico**: Si necesitas lógica específica del SO, usar `Platform.is_windows()`, `Platform.is_macos()`, etc.
+- **Archivos**: Evitar caracteres inválidos en Windows (`:`, `*`, `?`, `"`, `<`, `>`, `|`)
+- **Líneas nuevas**: Python maneja automáticamente `\n` vs `\r\n`
+
+**Ejemplo de código multiplataforma**:
+```python
+from utils.platform_paths import PlatformPaths
+from utils.platform_utils import Platform
+
+# Obtener directorio estándar del SO
+config_dir = PlatformPaths.get_config_dir()
+
+# Lógica específica de SO si es necesaria
+if Platform.is_windows():
+    # Código específico de Windows
+    pass
+elif Platform.is_macos():
+    # Código específico de macOS
+    pass
+else:  # Linux
+    # Código específico de Linux
+    pass
 ```
 
 ### Reglas de Organización

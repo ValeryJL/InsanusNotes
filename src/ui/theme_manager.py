@@ -2,12 +2,18 @@
 Gestor de temas para la interfaz de InsanusNotes.
 
 Este módulo gestiona la carga y aplicación de temas visuales mediante
-hojas de estilo QSS (Qt Style Sheets) dinámicas.
+hojas de estilo QSS (Qt Style Sheets) dinámicas de forma multiplataforma.
 """
 
 import json
+import logging
 from pathlib import Path
 from typing import Dict, Optional
+
+from utils.platform_utils import UITheme, Platform
+from utils.config_manager import get_config_manager
+
+logger = logging.getLogger(__name__)
 
 class ThemeManager:
     """
@@ -23,21 +29,31 @@ class ThemeManager:
     """
     
     def __init__(self):
-        """Inicializa el gestor de temas con el tema oscuro por defecto."""
+        """Inicializa el gestor de temas con detección automática del SO."""
         self.themes_path = Path(__file__).parent / "themes.json"
         self.themes = self._load_themes()
-        self.current_theme_id = "insanus_dark"
+        self.config_manager = get_config_manager()
+        
+        # Detectar tema recomendado según SO
+        recommended_theme = UITheme.get_recommended_theme()
+        self.current_theme_id = self.config_manager.get("theme", recommended_theme)
+        
+        logger.info(f"Tema seleccionado: {self.current_theme_id} (SO: {Platform.get_name()})")
     
     def _load_themes(self) -> Dict:
         """
-        Carga los temas desde el archivo JSON.
+        Carga los temas desde el archivo JSON de forma segura.
         
         Returns:
             Diccionario con las definiciones de temas
         """
-        if self.themes_path.exists():
-            with open(self.themes_path, 'r', encoding='utf-8') as f:
-                return json.load(f)
+        try:
+            if self.themes_path.exists():
+                with open(self.themes_path, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+        except (json.JSONDecodeError, IOError) as e:
+            logger.error(f"Error al cargar temas: {e}")
+        
         return {}
     
     def get_theme(self, theme_id: str) -> Optional[Dict]:
@@ -69,16 +85,20 @@ class ThemeManager:
 
     def set_theme(self, theme_id: str):
         """
-        Establece el tema activo.
+        Establece el tema activo y guarda en configuración.
         
         Args:
             theme_id: Identificador del tema a activar
             
         Note:
             Solo establece el tema si existe en la lista de temas disponibles.
+            La selección se guarda en la configuración de usuario.
         """
         if theme_id in self.themes:
             self.current_theme_id = theme_id
+            self.config_manager.set("theme", theme_id)
+            self.config_manager.save()
+            logger.info(f"Tema cambiado a: {theme_id}")
 
     def generate_qss(self) -> str:
         """

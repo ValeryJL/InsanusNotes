@@ -7,33 +7,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.0.0] - 2026-02-02
 
-### Added
-- Comprehensive documentation system
-  - README.md with project overview and quick start guide
-  - CONTRIBUTING.md with coding standards and best practices
-  - docs/ARCHITECTURE.md with detailed architecture documentation
-  - docs/API.md with complete API reference
-- Module-level docstrings for all Python files
-- Class and method docstrings following Google style guide
-- Type hints for better code clarity and IDE support
-- Inline comments for complex logic
+### Added - Soporte Multiplataforma
+- **Compatibilidad Windows/macOS/Linux completada**
+  - Gestión de rutas dinámicas según sistema operativo
+  - Directorios estándar del SO (AppData, Library, .local/share)
+  - Scripts de ejecución para cada plataforma (run.bat, run.sh, run.py)
+  
+- **Nuevos módulos de utilidad**
+  - `utils.platform_paths`: Gestión centralizada de rutas multiplataforma
+  - `utils.platform_utils`: Detección de SO y configuración UI adaptable
+  - `utils.config_manager`: Gestión centralizada de configuración global
+  - `utils.integrity_checker`: Validación y reparación automática de proyectos
+  
+- **Mejoras de robustez Windows**
+  - Manejo de archivos bloqueados con reintentos automáticos
+  - Escritura atómica de JSON mejorada
+  - Detección y manejo de errores de antivirus
+  - Nombres de archivos compatibles (sin caracteres inválidos)
+
+- **Características UI multiplataforma**
+  - Detección automática de tema del SO (claro/oscuro)
+  - Atajos de teclado adaptativos (Cmd en macOS, Ctrl en Windows/Linux)
+  - Fuentes nativas por plataforma
+  - Logging estructurado y mensajes informativos
+
+- **Documentación**
+  - docs/INSTALL_MULTIPLATFORM.md: Guía de instalación por plataforma
 
 ### Changed
-- Improved code organization and structure
-- Enhanced docstrings across all modules:
-  - `core.project_manager`: Project and ProjectManager classes
-  - `utils.json_io`: JSON I/O utilities
-  - `ui.blocks.base`: Base block classes
-  - `ui.main_window`: Main application window
-  - `ui.editor_canvas`: Editor canvas
-  - `ui.theme_manager`: Theme management
-- Standardized import ordering (standard library, third-party, local)
+- **Refactorización de core**
+  - `core.project_manager`: Uso de PlatformPaths y ConfigManager
+  - Cambio de convención: `.insanusnote.config` → `insanusnote.config`
+  - Cambio de papelera: `.trash` → `_trash` (compatible con Windows)
+  - Mejor error handling y logging
+
+- **Mejoras en utilidades**
+  - `utils.json_io`: Reintentos automáticos, backoff exponencial
+  - `utils.json_io`: Creación automática de directorios antes de escribir
+  - `ui.theme_manager`: Integración con ConfigManager y detección de SO
+
+- **Actualización de entrada**
+  - `main.py`: Verificación de dependencias y directorios
+  - `main.py`: Logging informativo y manejo de errores mejorado
 
 ### Improved
-- Code quality and maintainability
-- Developer onboarding experience
-- Documentation coverage
-- Code discoverability through better docstrings
+- Compatibilidad multiplataforma (Windows 10+, macOS 10.13+, Linux)
+- Robustez ante errores de I/O en Windows
+- Experiencia de usuario adaptada al SO
+- Almacenamiento de datos en directorios estándar por SO
+- Validación y recuperación automática de proyectos dañados
 
 ## [1.0.0] - Previous Version
 

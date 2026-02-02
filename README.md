@@ -1,6 +1,6 @@
 # InsanusNotes
 
-**InsanusNotes** es un editor de notas tipo Notion desarrollado en Python nativo para Linux, que permite crear y gestionar notas con soporte para bloques de texto enriquecido, tablas, propiedades personalizadas y comandos slash.
+**InsanusNotes** es un editor de notas tipo Notion desarrollado en Python con soporte **multiplataforma** (Windows, macOS, Linux). Permite crear y gestionar notas con bloques de texto enriquecido, tablas, propiedades personalizadas y comandos slash.
 
 ## 🚀 Características
 
@@ -15,6 +15,7 @@
 - **Sistema de papelera**: Recupera archivos eliminados
 - **Temas personalizables**: Interfaz con soporte para múltiples temas
 - **Auto-guardado**: Guarda automáticamente los cambios
+- **Multiplataforma**: Funciona en Windows, macOS y Linux
 
 ## 📋 Requisitos
 
@@ -22,23 +23,42 @@
 - PyQt6
 - Dependencias adicionales (ver `requirements.txt`)
 
-## 🔧 Instalación
+## 🔧 Instalación Rápida
 
-1. Clona el repositorio:
+### Windows
+```cmd
+run.bat
+```
+
+### macOS / Linux
+```bash
+bash run.sh
+```
+
+### Cualquier plataforma
+```bash
+python run.py
+```
+
+### Instalación Manual
+
+1. **Clona el repositorio**:
 ```bash
 git clone https://github.com/ValeryJL/InsanusNotes.git
 cd InsanusNotes
 ```
 
-2. Instala las dependencias:
+2. **Instala las dependencias**:
 ```bash
 pip install -r requirements.txt
 ```
 
-3. Ejecuta la aplicación:
+3. **Ejecuta la aplicación**:
 ```bash
 python main.py
 ```
+
+Para instrucciones detalladas de instalación por plataforma, consulta [docs/INSTALL_MULTIPLATFORM.md](docs/INSTALL_MULTIPLATFORM.md).
 
 ## 📁 Estructura del Proyecto
 
@@ -46,26 +66,24 @@ python main.py
 InsanusNotes/
 ├── main.py                 # Punto de entrada de la aplicación
 ├── requirements.txt        # Dependencias del proyecto
+├── run.py                  # Launcher universal
+├── run.sh                  # Launcher para Linux/macOS
+├── run.bat                 # Launcher para Windows
 └── src/
     ├── core/              # Lógica de negocio principal
-    │   ├── __init__.py
     │   └── project_manager.py  # Gestión de proyectos
-    ├── models/            # Modelos de datos
-    │   └── __init__.py
     ├── ui/                # Interfaz de usuario
     │   ├── blocks/        # Componentes de bloques
-    │   │   ├── base.py           # Clase base para bloques
-    │   │   ├── text_block.py     # Bloque de texto
-    │   │   ├── table_block.py    # Bloque de tabla
-    │   │   ├── header_block.py   # Bloque de encabezado
-    │   │   └── properties_block.py # Bloque de propiedades
     │   ├── widgets/       # Widgets personalizados
     │   ├── main_window.py        # Ventana principal
     │   ├── editor_canvas.py      # Canvas del editor
     │   ├── project_selector.py   # Selector de proyectos
     │   └── theme_manager.py      # Gestor de temas
     └── utils/             # Utilidades
-        ├── __init__.py
+        ├── platform_paths.py     # Gestión de rutas multiplataforma
+        ├── platform_utils.py     # Detección de SO
+        ├── config_manager.py     # Configuración global
+        ├── integrity_checker.py  # Validación de proyectos
         └── json_io.py            # Operaciones I/O JSON
 ```
 
@@ -92,10 +110,10 @@ Presiona `/` en un bloque de texto para abrir el menú de comandos:
 
 ### Atajos de Teclado
 
-- `Ctrl+Shift+N`: Nuevo proyecto
-- `Ctrl+Shift+O`: Abrir proyecto
-- `Ctrl+Q`: Salir
-- `Ctrl+S`: Guardar (auto-guardado habilitado por defecto)
+- `Ctrl+Shift+N` (Windows/Linux) | `Cmd+Shift+N` (macOS): Nuevo proyecto
+- `Ctrl+Shift+O` (Windows/Linux) | `Cmd+Shift+O` (macOS): Abrir proyecto
+- `Ctrl+Q` (Windows/Linux) | `Cmd+Q` (macOS): Salir
+- `Ctrl+S` (Windows/Linux) | `Cmd+S` (macOS): Guardar (auto-guardado habilitado por defecto)
 
 ## 🏗️ Arquitectura
 
@@ -103,16 +121,25 @@ InsanusNotes sigue una arquitectura modular:
 
 - **Core**: Lógica de negocio, gestión de proyectos y archivos
 - **UI**: Componentes visuales basados en PyQt6
-- **Models**: Estructuras de datos
-- **Utils**: Funciones auxiliares y utilidades
+- **Utils**: Funciones auxiliares, gestión de rutas, configuración y validación
+
+Consulta [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) para más detalles.
 
 ## 🤝 Contribuir
 
 Lee la [Guía de Contribución](CONTRIBUTING.md) para conocer las normas y estándares del proyecto.
 
+## 📚 Documentación
+
+- [Guía de Instalación Multiplataforma](docs/INSTALL_MULTIPLATFORM.md)
+- [Arquitectura del Proyecto](docs/ARCHITECTURE.md)
+- [API Reference](docs/API.md)
+- [Guía de Contribución](CONTRIBUTING.md)
+- [Changelog](CHANGELOG.md)
+
 ## 📝 Licencia
 
-Este proyecto es de código abierto y está disponible bajo la licencia que se especifique.
+Este proyecto es de código abierto.
 
 ## 👥 Autores
 
@@ -121,7 +148,3 @@ Este proyecto es de código abierto y está disponible bajo la licencia que se e
 ## 🐛 Reportar Problemas
 
 Si encuentras algún problema o tienes sugerencias, por favor abre un issue en el repositorio de GitHub.
-
-## 📚 Documentación Adicional
-
-Para más información sobre la arquitectura y desarrollo, consulta la carpeta `docs/`.

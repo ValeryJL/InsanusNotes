@@ -2,15 +2,20 @@
 Gestor de proyectos y archivos de InsanusNotes.
 
 Este módulo contiene las clases principales para gestionar proyectos, archivos
-y el sistema de papelera de la aplicación.
+y el sistema de papelera de la aplicación de forma multiplataforma.
 """
 
 import os
+import logging
 from pathlib import Path
 from typing import Dict, List, Optional
 from datetime import datetime
 
 from utils.json_io import read_json, write_json, write_json_atomic
+from utils.platform_paths import PlatformPaths
+from utils.config_manager import get_config_manager
+
+logger = logging.getLogger(__name__)
 
 class Project:
     """
@@ -38,14 +43,19 @@ class Project:
         Args:
             path: Ruta al directorio del proyecto
         """
-        self.path = path
-        self.config_file = path / ".insanusnote.config"
+        self.path = PlatformPaths.normalize_path(Path(path))
+        # Cambiar de .insanusnote.config a insanusnote.config (compatible con Windows)
+        self.config_file = self.path / "insanusnote.config"
         self.config = self._load_config()
         
         # Directorios estándar
-        self.notes_dir = path / self.config.get("notesPath", "notes")
-        self.interfaces_dir = path / self.config.get("interfacesPath", "interfaces") 
-        self.data_dir = path / self.config.get("dataPath", "data")
+        self.notes_dir = self.path / self.config.get("notesPath", "notes")
+        self.interfaces_dir = self.path / self.config.get("interfacesPath", "interfaces") 
+        self.data_dir = self.path / self.config.get("dataPath", "data")
+        
+        # Cambiar de .trash a _trash (compatible con Windows)
+        self.trash_dir = self.path / "_trash"
+        self.trash_index = self.trash_dir / "trash_index.json"
         
         # Crear estructura si no existe
         self._create_structure()
@@ -76,21 +86,27 @@ class Project:
         
         Crea los directorios para notas, interfaces, datos y la papelera.
         También inicializa el archivo de configuración si no existe.
+        
+        Raises:
+            OSError: Si hay problemas al crear los directorios (permisos, espacio, etc.)
         """
-        for directory in [self.notes_dir, self.interfaces_dir, self.data_dir]:
-            directory.mkdir(exist_ok=True)
+        try:
+            for directory in [self.notes_dir, self.interfaces_dir, self.data_dir]:
+                directory.mkdir(parents=True, exist_ok=True)
             
-        # Crear papelera oculta
-        self.trash_dir = self.path / ".trash"
-        self.trash_dir.mkdir(exist_ok=True)
-        
-        self.trash_index = self.trash_dir / ".trash_index.json"
-        if not self.trash_index.exists():
-            write_json(self.trash_index, {})
-        
-        # Guardar config si no existe
-        if not self.config_file.exists():
-            write_json(self.config_file, self.config)
+            # Crear papelera (sin punto para Windows)
+            self.trash_dir.mkdir(exist_ok=True)
+            
+            if not self.trash_index.exists():
+                write_json(self.trash_index, {})
+            
+            # Guardar config si no existe
+            if not self.config_file.exists():
+                write_json(self.config_file, self.config)
+                
+        except OSError as e:
+            logger.error(f"Error al crear estructura del proyecto en {self.path}: {e}")
+            raise
 
     def move_to_trash(self, file_path: Path):
         """
@@ -261,30 +277,9 @@ class ProjectManager:
     def __init__(self):
         """Inicializa el gestor de proyectos."""
         self.current_project: Optional[Project] = None
-        self.recent_projects_file = Path.home() / ".insanusnotes_recent.json"
-        self.recent_projects: List[str] = self._load_recent()
-    
-    def _load_recent(self) -> List[str]:
-        """
-        Carga la lista de proyectos recientes.
-        
-        Returns:
-            Lista de rutas de proyectos recientes (strings)
-        """
-        return read_json(self.recent_projects_file, [])
-    
-    def _save_recent(self):
-        """
-        Guarda la lista de proyectos recientes.
-        
-        Note:
-            Usa escritura atómica para prevenir corrupción.
-            Errores se ignoran silenciosamente para no interrumpir la aplicación.
-        """
-        try:
-            write_json_atomic(self.recent_projects_file, self.recent_projects)
-        except Exception:
-            pass
+        self.config_manager = get_config_manager()
+        # Usar config_manager en lugar de archivo local
+        self.recent_projects: List[str] = self.config_manager.get_recent_projects()
     
     def create_project(self, path: Path, name: str) -> Project:
         """
@@ -297,26 +292,31 @@ class ProjectManager:
         Returns:
             Instancia del proyecto creado
             
+        Raises:
+            OSError: Si hay problemas al crear el directorio
+            
         Note:
             El proyecto se añade automáticamente a la lista de recientes
             y se establece como proyecto actual.
         """
-        project_path = path / name
-        project_path.mkdir(exist_ok=True)
-        
-        project = Project(project_path)
-        project.cleanup_old_trash() # Limpieza inicial
-        
-        # Añadir a recientes
-        project_str = str(project_path.absolute())
-        if project_str in self.recent_projects:
-            self.recent_projects.remove(project_str)
-        self.recent_projects.insert(0, project_str)
-        self.recent_projects = self.recent_projects[:10]  # Limitar a 10
-        self._save_recent()
-        
-        self.current_project = project
-        return project
+        try:
+            project_path = path / name
+            project_path.mkdir(parents=True, exist_ok=True)
+            
+            project = Project(project_path)
+            project.cleanup_old_trash()
+            
+            # Usar config_manager para guardar recientes
+            self.config_manager.add_recent_project(str(project_path.absolute()))
+            self.recent_projects = self.config_manager.get_recent_projects()
+            
+            self.current_project = project
+            logger.info(f"Proyecto creado: {project_path}")
+            return project
+            
+        except OSError as e:
+            logger.error(f"Error al crear proyecto en {path}/{name}: {e}")
+            raise
     
     def open_project(self, path: Path) -> Project:
         """
@@ -328,22 +328,28 @@ class ProjectManager:
         Returns:
             Instancia del proyecto abierto
             
+        Raises:
+            FileNotFoundError: Si el proyecto no existe
+            
         Note:
             El proyecto se mueve al inicio de la lista de recientes
             y se establece como proyecto actual.
         """
-        project = Project(path)
-        project.cleanup_old_trash() # Limpieza inicial
+        path = PlatformPaths.normalize_path(Path(path))
+        if not path.exists():
+            raise FileNotFoundError(f"El proyecto no existe: {path}")
         
-        # Actualizar recientes
-        project_str = str(path.absolute())
-        if project_str in self.recent_projects:
-            self.recent_projects.remove(project_str)
-        self.recent_projects.insert(0, project_str)
-        self.recent_projects = self.recent_projects[:10]
-        self._save_recent()
+        project = Project(path)
+        project.cleanup_old_trash()
+        
+        # Actualizar recientes usando config_manager
+        self.config_manager.add_recent_project(str(path.absolute()))
+        self.config_manager.set("last_project", str(path.absolute()))
+        self.config_manager.save()
+        self.recent_projects = self.config_manager.get_recent_projects()
         
         self.current_project = project
+        logger.info(f"Proyecto abierto: {path}")
         return project
     
     def get_recent_projects(self) -> List[Path]:
