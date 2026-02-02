@@ -103,6 +103,11 @@ class PropertiesBlock(BaseBlock):
         self.btn_add = QPushButton("+ Agregar propiedad")
         self.btn_add.setObjectName("PropAddButton")
         self.btn_add.clicked.connect(self.add_prop_row)
+        
+        # En interfaces, deshabilitar el botón de agregar propiedades
+        if self.interface_mode or self.is_interface:
+            self.btn_add.setEnabled(False)
+            self.btn_add.setStyleSheet("background-color: #1a1a2e; color: #666666;")
 
         panel_layout.addWidget(self.btn_toggle)
         panel_layout.addWidget(self.props_container)
@@ -152,6 +157,12 @@ class PropertiesBlock(BaseBlock):
         key_edit.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         key_edit.textChanged.connect(lambda text: self._validate_property_name(key_edit, text))
         key_edit.textChanged.connect(self.content_changed.emit)
+        
+        # En interfaces, desabilitar edición de nombres
+        if (self.interface_mode or self.is_interface) and key and key != "Implementa":
+            key_edit.setReadOnly(True)
+            key_edit.setStyleSheet("background-color: #1a1a2e; color: #888888;")
+        
         key_edit.installEventFilter(self)
 
         type_combo = None
@@ -166,6 +177,10 @@ class PropertiesBlock(BaseBlock):
         # Create delete button
         del_btn = QPushButton("x")
         del_btn.setObjectName("PropDelButton")
+        
+        # En interfaces, ocultar botón de eliminación
+        if self.interface_mode or self.is_interface:
+            del_btn.hide()
 
         # Create separator
         sep = QFrame()
@@ -224,8 +239,19 @@ class PropertiesBlock(BaseBlock):
         type_combo.addItems(self.property_types)
         if p_type in self.property_types:
             type_combo.setCurrentText(p_type)
+        
+        # En interfaces, desabilitar el combo de tipo
+        if self.interface_mode or self.is_interface:
+            type_combo.setEnabled(False)
+            type_combo.setStyleSheet("background-color: #1a1a2e; color: #888888;")
             
         value_widget = self._build_value_widget(p_type, initial_value)
+        
+        # En interfaces, desabilitar el widget de valor
+        if self.interface_mode or self.is_interface:
+            value_widget.setEnabled(False)
+            value_widget.setStyleSheet("background-color: #1a1a2e; color: #888888;")
+        
         value_widget.installEventFilter(self)
         
         return type_combo, value_widget
@@ -328,7 +354,10 @@ class PropertiesBlock(BaseBlock):
                 
             p_type = row.type_combo.currentText() if row.type_combo else "Texto"
             
-            if isinstance(row.value_widget, ArrayItemsWidget):
+            # En interfaces, NO guardar contenido - solo tipo
+            if self.interface_mode or self.is_interface:
+                value = ""
+            elif isinstance(row.value_widget, ArrayItemsWidget):
                 value = row.value_widget.get_data()
             else:
                 value = PropertyWidgetFactory.extract_value(row.value_widget, p_type, self.list_placeholder)
@@ -339,6 +368,14 @@ class PropertiesBlock(BaseBlock):
                 content[name] = {"type": p_type, "value": value}
 
         return {"type": "properties", "content": content}
+
+    def get_data(self) -> dict:
+        """Alias for to_dict() for compatibility with EditorCanvas."""
+        return self.to_dict()
+
+    def set_data(self, data: dict):
+        """Alias for from_dict() for compatibility with EditorCanvas."""
+        return self.from_dict(data)
 
     def from_dict(self, data: dict):
         """Deserialize properties from dictionary and validate inheritance."""
@@ -431,7 +468,9 @@ class PropertiesBlock(BaseBlock):
         
         # Add all properties
         for prop in properties_to_add:
-            self.add_prop_row(prop["name"], prop["value"], prop["type"])
+            # En interfaces, no cargar valores - siempre pasar vacío
+            value_to_use = "" if (self.interface_mode or self.is_interface) else prop["value"]
+            self.add_prop_row(prop["name"], value_to_use, prop["type"])
             if prop["inherit"] and self.rows:
                 self._mark_row_as_inherited(self.rows[-1], from_interface=parent_is_interface)
         
