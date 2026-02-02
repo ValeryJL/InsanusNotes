@@ -1,14 +1,45 @@
+"""
+Canvas del editor de notas.
+
+Este módulo contiene el widget principal que gestiona los bloques del editor,
+su organización y las señales de cambio de contenido.
+"""
+
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QScrollArea, QSizePolicy
 from PyQt6.QtCore import Qt, pyqtSignal
 from .blocks import HeaderBlock, PropertiesBlock, TextBlock, TableBlock, BaseBlock
 import json
 
 class EditorCanvas(QWidget):
-    """Contenedor principal de bloques que forma la nota"""
+    """
+    Contenedor principal de bloques que forma la nota.
+    
+    Gestiona la estructura de una nota, que consiste en:
+    1. HeaderBlock (título - obligatorio)
+    2. PropertiesBlock (metadatos - obligatorio)
+    3. Bloques de contenido (texto, tablas, etc.)
+    
+    Signals:
+        content_changed: Emitida cuando hay cambios en cualquier bloque
+        
+    Attributes:
+        project_path: Ruta al proyecto actual
+        theme_manager: Gestor de temas para los bloques
+        blocks: Lista de bloques en el canvas
+        content_area: Widget contenedor principal
+        blocks_container: Widget que contiene los bloques
+    """
     
     content_changed = pyqtSignal() # Señal global de cambios
 
     def __init__(self, project_path=None, theme_manager=None):
+        """
+        Inicializa el canvas del editor.
+        
+        Args:
+            project_path: Ruta al proyecto actual (opcional)
+            theme_manager: Gestor de temas (opcional)
+        """
         super().__init__()
         self.project_path = project_path
         self.theme_manager = theme_manager
@@ -40,7 +71,14 @@ class EditorCanvas(QWidget):
         self.init_empty_note()
 
     def init_empty_note(self):
-        """Crea la estructura obligatoria de una nota nueva"""
+        """
+        Crea la estructura obligatoria de una nota nueva.
+        
+        Una nota vacía consta de:
+        1. HeaderBlock - Título de la nota
+        2. PropertiesBlock - Metadatos y propiedades
+        3. TextBlock - Primer bloque de contenido
+        """
         self.clear_blocks()
         
         # 1. Header (Obligatorio)
@@ -56,6 +94,16 @@ class EditorCanvas(QWidget):
         self.add_block(first_text)
 
     def add_block(self, block: BaseBlock, index=-1):
+        """
+        Añade un bloque al canvas.
+        
+        Args:
+            block: Instancia del bloque a añadir
+            index: Posición donde insertar (-1 para añadir al final)
+            
+        Note:
+            Conecta automáticamente las señales del bloque al canvas.
+        """
         if index == -1:
             self.blocks_layout.addWidget(block)
             self.blocks.append(block)
