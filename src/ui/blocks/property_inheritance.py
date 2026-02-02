@@ -134,31 +134,32 @@ class PropertyInheritanceManager:
         except Exception:
             return {}
 
-    def load_inherited_properties_data(self, file_path: str) -> Dict:
+    def load_inherited_properties_data(self, file_path: str, recursive: bool = False) -> Dict:
         """
         Load property data from a file for inheritance.
         
         Args:
             file_path: Relative path to the file
+            recursive: Whether to recursively load parent properties
             
         Returns:
-            Dictionary with 'properties' list and 'implements' path
+            Dictionary with 'properties' list, 'implements' path, and 'is_interface' flag
         """
         if not self.project_path:
-            return {"properties": [], "implements": None}
+            return {"properties": [], "implements": None, "is_interface": False}
 
         full_path = Path(self.project_path) / file_path
         if not full_path.exists():
-            return {"properties": [], "implements": None}
+            return {"properties": [], "implements": None, "is_interface": False}
 
         try:
             with open(full_path, "r", encoding="utf-8") as f:
                 content = f.read()
                 if not content.strip():
-                    return {"properties": [], "implements": None}
+                    return {"properties": [], "implements": None, "is_interface": False}
                 data = json.loads(content)
 
-            result = {"properties": [], "implements": None}
+            result = {"properties": [], "implements": None, "is_interface": full_path.suffix == ".inin"}
 
             if isinstance(data, list):
                 props_block = self._find_properties_block(data)
@@ -180,11 +181,43 @@ class PropertyInheritanceManager:
                 result["properties"] = data.get("properties", [])
                 result["implements"] = data.get("implements")
 
+            # Recursively load parent properties if requested
+            if recursive and result["implements"]:
+                parent_data = self.load_inherited_properties_data(result["implements"], recursive=True)
+                # Merge parent properties (child properties override parent)
+                child_names = {p["name"] for p in result["properties"]}
+                for parent_prop in parent_data["properties"]:
+                    if parent_prop["name"] not in child_names:
+                        result["properties"].append(parent_prop)
+
             return result
 
         except Exception as e:
             print(f"Error loading inherited properties: {e}")
-            return {"properties": [], "implements": None}
+            return {"properties": [], "implements": None, "is_interface": False}
+    
+    def get_full_inherited_properties(self, file_path: str) -> Dict[str, Dict]:
+        """
+        Get complete property data (name, type, value) from parent file and its ancestors.
+        
+        Args:
+            file_path: Relative path to the file
+            
+        Returns:
+            Dictionary mapping property names to their full data (type, value)
+        """
+        data = self.load_inherited_properties_data(file_path, recursive=True)
+        prop_dict = {}
+        
+        for prop in data.get("properties", []):
+            prop_dict[prop["name"]] = {
+                "type": prop["type"],
+                "value": prop["value"]
+            }
+        
+        prop_dict["_is_interface"] = data.get("is_interface", False)
+        
+        return prop_dict
 
     def _find_properties_block(self, data: list) -> Optional[Dict]:
         """

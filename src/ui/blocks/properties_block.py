@@ -8,7 +8,7 @@ separate modules following SOLID principles.
 
 from __future__ import annotations
 
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Dict
 
 from PyQt6.QtCore import Qt, QEvent
 from PyQt6.QtWidgets import (
@@ -341,7 +341,7 @@ class PropertiesBlock(BaseBlock):
         return {"type": "properties", "content": content}
 
     def from_dict(self, data: dict):
-        """Deserialize properties from dictionary."""
+        """Deserialize properties from dictionary and validate inheritance."""
         self._loading_data = True
         
         # Clear existing rows except "Implementa"
@@ -366,11 +366,19 @@ class PropertiesBlock(BaseBlock):
                 if hasattr(row.value_widget, "setText"):
                     row.value_widget.setText(impl_val)
                 break
-                
-        # Get inherited property map
-        parent_map = self.inheritance_manager.get_inherited_property_map(impl_val) if impl_val else {}
-
-        # Load other properties
+        
+        # Get full parent property data (including values)
+        parent_props = {}
+        parent_is_interface = False
+        if impl_val:
+            parent_props = self.inheritance_manager.get_full_inherited_properties(impl_val)
+            parent_is_interface = parent_props.pop("_is_interface", False)
+        
+        # Track properties to check for parent updates
+        properties_to_add = []
+        new_parent_properties = []
+        
+        # Load properties from saved data
         for k, v in content.items():
             if k == "Implementa":
                 continue
@@ -385,26 +393,124 @@ class PropertiesBlock(BaseBlock):
                 inherit_flag = bool(v.get("inherit"))
             else:
                 p_val = str(v)
-
-            # Validate inheritance
+            
+            # Validate and update inheritance flag
             if inherit_flag and impl_val:
-                parent_type = parent_map.get(k)
-                if not parent_type or parent_type != p_type:
+                if k in parent_props:
+                    parent_type = parent_props[k]["type"]
+                    if parent_type == p_type:
+                        # Property still exists in parent with same type
+                        # If inheriting from note (not interface), update value
+                        if not parent_is_interface and not self.is_interface:
+                            p_val = parent_props[k]["value"]
+                    else:
+                        # Type mismatch - remove inherit flag
+                        inherit_flag = False
+                else:
+                    # Property no longer exists in parent - remove inherit flag
                     inherit_flag = False
-                    
-            self.add_prop_row(k, p_val, p_type)
-            if inherit_flag and self.rows:
+            
+            properties_to_add.append({
+                "name": k,
+                "type": p_type,
+                "value": p_val,
+                "inherit": inherit_flag
+            })
+        
+        # Check for new properties in parent that don't exist locally
+        if impl_val and parent_props:
+            existing_names = {p["name"] for p in properties_to_add}
+            for parent_name, parent_data in parent_props.items():
+                if parent_name not in existing_names:
+                    new_parent_properties.append({
+                        "name": parent_name,
+                        "type": parent_data["type"],
+                        "value": parent_data["value"],
+                        "is_interface": parent_is_interface
+                    })
+        
+        # Add all properties
+        for prop in properties_to_add:
+            self.add_prop_row(prop["name"], prop["value"], prop["type"])
+            if prop["inherit"] and self.rows:
                 self._mark_row_as_inherited(self.rows[-1])
-
-        # Sync inherited properties
-        if impl_val:
-            self._sync_inherited_properties(impl_val)
-
+        
+        # Handle new properties from parent
+        if new_parent_properties:
+            self._handle_new_parent_properties(impl_val, new_parent_properties)
+        
         # Hide panel if empty and not interface
         if not self.is_interface and len(content) == 0:
             self.hide_panel()
             
         self._loading_data = False
+    
+    def _handle_new_parent_properties(self, impl_val: str, new_properties: List[Dict]):
+        """Handle new properties that appeared in parent file."""
+        from .conflict_dialog import SimpleConflictDialog, ConflictResolutionDialog
+        
+        # Check which new properties conflict with existing local properties
+        conflicts = []
+        non_conflicts = []
+        
+        row_by_name = {row.key_edit.text().strip(): row for row in self.rows}
+        
+        for prop in new_properties:
+            if prop["name"] in row_by_name:
+                # Conflict - property exists locally
+                row = row_by_name[prop["name"]]
+                local_type = row.type_combo.currentText() if row.type_combo else "Texto"
+                
+                if local_type == prop["type"]:
+                    # Same type - can be handled
+                    local_value = self._get_row_value(row)
+                    conflicts.append({
+                        "name": prop["name"],
+                        "local_type": local_type,
+                        "local_value": local_value,
+                        "parent_type": prop["type"],
+                        "parent_value": prop["value"]
+                    })
+                # else: different type - just ignore, keep local
+            else:
+                # No conflict - can be added directly
+                non_conflicts.append(prop)
+        
+        # Add non-conflicting properties
+        for prop in non_conflicts:
+            if prop["is_interface"] or self.interface_mode:
+                # From interface - add without value
+                self.add_prop_row(prop["name"], "", prop["type"])
+            else:
+                # From note - add with value
+                self.add_prop_row(prop["name"], prop["value"], prop["type"])
+            
+            if self.rows:
+                self._mark_row_as_inherited(self.rows[-1])
+        
+        # Handle conflicts
+        if conflicts:
+            dialog = ConflictResolutionDialog(conflicts, self)
+            if dialog.exec():
+                resolutions = dialog.get_resolutions()
+                for conflict in conflicts:
+                    name = conflict["name"]
+                    resolution = resolutions.get(name, "keep")
+                    
+                    row = row_by_name[name]
+                    if resolution == "overwrite":
+                        self._update_row_value(row, conflict["parent_value"])
+                    
+                    # Mark as inherited either way
+                    self._mark_row_as_inherited(row)
+            else:
+                # User wants to remove Implementa
+                for row in self.rows:
+                    if row.key_edit.text() == "Implementa":
+                        if hasattr(row.value_widget, "setText"):
+                            row.value_widget.setText("")
+                        break
+                self._clear_inherited_properties()
 
     def eventFilter(self, obj, event):
         """Handle keyboard events for quick property addition."""
@@ -462,9 +568,9 @@ class PropertiesBlock(BaseBlock):
 
         valid = self.inheritance_manager.validate_implements_file(file_path)
         if valid:
-            duplicates = self._check_duplicate_properties(file_path)
-            if duplicates:
-                self._show_duplicate_warning(widget, file_path, duplicates)
+            conflicts_info = self._check_property_conflicts(file_path)
+            if conflicts_info["has_conflicts"]:
+                self._handle_inheritance_conflicts(widget, file_path, conflicts_info)
             else:
                 widget.setStyleSheet("")
                 self.has_inheritance_errors = False
@@ -474,41 +580,185 @@ class PropertiesBlock(BaseBlock):
             self.has_inheritance_errors = True
             self._clear_inherited_properties()
 
-    def _show_duplicate_warning(self, widget: QLineEdit, file_path: str, duplicates: List[str]):
-        """Show warning dialog for duplicate properties."""
-        from PyQt6.QtWidgets import QMessageBox
-
-        QMessageBox.warning(
-            self,
-            "Propiedades duplicadas",
-            f"No se puede implementar '{file_path}' porque las siguientes propiedades ya existen:\n\n"
-            + "\n".join(f"• {prop}" for prop in duplicates)
-            + "\n\nElimina estas propiedades primero para poder implementar.",
-        )
-        widget.setStyleSheet("border: 1px solid #ff4444; background-color: #331111;")
-        self.has_inheritance_errors = True
-        self._clear_inherited_properties()
+    def _check_property_conflicts(self, file_path: str) -> Dict:
+        """
+        Check for property conflicts with detailed information.
         
-        for duplicate_name in duplicates:
-            for row_data in self.rows:
-                if row_data in self.inherited_properties:
-                    continue
-                if row_data.key_edit.text().strip() == duplicate_name:
-                    row_data.key_edit.setStyleSheet("border: 1px solid #ff4444; background-color: #331111;")
-
-    def _check_duplicate_properties(self, file_path: str) -> List[str]:
-        """Check for duplicate properties between current and parent file."""
-        parent_map = self.inheritance_manager.get_inherited_property_map(file_path)
-        duplicates = []
+        Returns dict with:
+        - has_conflicts: bool
+        - name_only_conflicts: list of names that conflict (different types)
+        - type_matching_conflicts: list of dicts with full data for same-type conflicts
+        """
+        parent_props = self.inheritance_manager.get_full_inherited_properties(file_path)
+        parent_is_interface = parent_props.pop("_is_interface", False)
+        
+        result = {
+            "has_conflicts": False,
+            "name_only_conflicts": [],
+            "type_matching_conflicts": []
+        }
         
         for row in self.rows:
             if row in self.inherited_properties:
                 continue
+            
             name = row.key_edit.text().strip()
-            if name and name != "Implementa" and name in parent_map:
-                duplicates.append(name)
+            if not name or name == "Implementa":
+                continue
                 
-        return duplicates
+            if name in parent_props:
+                result["has_conflicts"] = True
+                local_type = row.type_combo.currentText() if row.type_combo else "Texto"
+                parent_type = parent_props[name]["type"]
+                
+                if local_type == parent_type:
+                    # Same type - can be merged
+                    local_value = self._get_row_value(row)
+                    result["type_matching_conflicts"].append({
+                        "name": name,
+                        "local_type": local_type,
+                        "local_value": local_value,
+                        "parent_type": parent_type,
+                        "parent_value": parent_props[name]["value"]
+                    })
+                else:
+                    # Different type - name-only conflict
+                    result["name_only_conflicts"].append(name)
+        
+        return result
+    
+    def _get_row_value(self, row):
+        """Extract current value from a row."""
+        if isinstance(row.value_widget, ArrayItemsWidget):
+            return row.value_widget.get_data()
+        else:
+            p_type = row.type_combo.currentText() if row.type_combo else "Texto"
+            return PropertyWidgetFactory.extract_value(row.value_widget, p_type, self.list_placeholder)
+    
+    def _handle_inheritance_conflicts(self, widget: QLineEdit, file_path: str, conflicts_info: Dict):
+        """Handle conflicts when setting up inheritance."""
+        from .conflict_dialog import SimpleConflictDialog, ConflictResolutionDialog
+        
+        # If there are name-only conflicts (different types), show simple dialog
+        if conflicts_info["name_only_conflicts"]:
+            all_conflicts = conflicts_info["name_only_conflicts"] + [c["name"] for c in conflicts_info["type_matching_conflicts"]]
+            
+            dialog = SimpleConflictDialog(all_conflicts, self, allow_cancel=True)
+            if dialog.exec():
+                action = dialog.get_action()
+                
+                if action == "cancel":
+                    widget.setText("")
+                    self._clear_inherited_properties()
+                    widget.setStyleSheet("")
+                    self.has_inheritance_errors = False
+                    return
+                
+                elif action == "delete":
+                    # Delete conflicting properties
+                    self._delete_conflicting_properties(all_conflicts)
+                    widget.setStyleSheet("")
+                    self.has_inheritance_errors = False
+                    self._sync_inherited_properties(file_path)
+                    return
+                
+                elif action == "handle":
+                    # Only show conflict resolution for type-matching conflicts
+                    if conflicts_info["type_matching_conflicts"]:
+                        self._show_conflict_resolution_dialog(widget, file_path, conflicts_info["type_matching_conflicts"])
+                    # Still need to delete name-only conflicts
+                    if conflicts_info["name_only_conflicts"]:
+                        self._delete_conflicting_properties(conflicts_info["name_only_conflicts"])
+                    return
+            else:
+                # Dialog was cancelled
+                widget.setText("")
+                self._clear_inherited_properties()
+                widget.setStyleSheet("")
+                self.has_inheritance_errors = False
+                return
+        
+        # Only type-matching conflicts - go straight to resolution
+        elif conflicts_info["type_matching_conflicts"]:
+            self._show_conflict_resolution_dialog(widget, file_path, conflicts_info["type_matching_conflicts"])
+    
+    def _show_conflict_resolution_dialog(self, widget: QLineEdit, file_path: str, conflicts: List[Dict]):
+        """Show detailed conflict resolution dialog."""
+        from .conflict_dialog import ConflictResolutionDialog
+        
+        dialog = ConflictResolutionDialog(conflicts, self)
+        if dialog.exec():
+            resolutions = dialog.get_resolutions()
+            self._apply_conflict_resolutions(resolutions, conflicts, file_path)
+            widget.setStyleSheet("")
+            self.has_inheritance_errors = False
+        else:
+            # User cancelled - clear inheritance
+            widget.setText("")
+            self._clear_inherited_properties()
+            widget.setStyleSheet("")
+            self.has_inheritance_errors = False
+    
+    def _delete_conflicting_properties(self, conflict_names: List[str]):
+        """Delete properties by name."""
+        for name in conflict_names:
+            for row in list(self.rows):
+                if row.key_edit.text().strip() == name:
+                    self.remove_prop_row(row)
+                    break
+    
+    def _apply_conflict_resolutions(self, resolutions: Dict[str, str], conflicts: List[Dict], file_path: str):
+        """Apply user's conflict resolutions."""
+        for conflict in conflicts:
+            name = conflict["name"]
+            resolution = resolutions.get(name, "keep")
+            
+            if resolution == "overwrite":
+                # Find and update the row with parent's value
+                for row in self.rows:
+                    if row.key_edit.text().strip() == name:
+                        self._update_row_value(row, conflict["parent_value"])
+                        # Mark as inherited
+                        self._mark_row_as_inherited(row)
+                        break
+            elif resolution == "keep":
+                # Just mark as inherited but keep current value
+                for row in self.rows:
+                    if row.key_edit.text().strip() == name:
+                        self._mark_row_as_inherited(row)
+                        break
+        
+        # Now sync any additional properties from parent
+        self._sync_inherited_properties(file_path)
+    
+    def _update_row_value(self, row, new_value):
+        """Update a row's value widget with new value."""
+        if isinstance(row.value_widget, ArrayItemsWidget):
+            # Clear existing items
+            for item in list(row.value_widget.items):
+                row.value_widget._remove_item(item.row_widget)
+            # Add new items
+            if isinstance(new_value, list):
+                for item in new_value:
+                    if isinstance(item, dict):
+                        row.value_widget.add_item(
+                            item.get("name", ""),
+                            item.get("value", ""),
+                            item.get("type", "Texto")
+                        )
+        else:
+            p_type = row.type_combo.currentText() if row.type_combo else "Texto"
+            if p_type == "Booleano" and hasattr(row.value_widget, "setChecked"):
+                row.value_widget.setChecked(bool(new_value))
+            elif p_type == "Número" and hasattr(row.value_widget, "setValue"):
+                try:
+                    row.value_widget.setValue(float(new_value))
+                except:
+                    pass
+            elif hasattr(row.value_widget, "setText"):
+                row.value_widget.setText(str(new_value) if new_value is not None else "")
+            elif hasattr(row.value_widget, "setCurrentText"):
+                row.value_widget.setCurrentText(str(new_value) if new_value is not None else "")
 
     def _validate_property_name(self, key_edit: QLineEdit, text: str):
         """Validate property name for duplicates."""
