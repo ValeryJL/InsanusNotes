@@ -38,14 +38,31 @@ def check_dependencies() -> bool:
         bool: True si todas las dependencias están ok, False si hay problemas
     """
     try:
-        import PyQt6
-        logger.info(f"PyQt6 {PyQt6.__version__} ✓")
+        import importlib.metadata
         
-        import markdown
-        logger.info("markdown ✓")
+        # Verificar PyQt6
+        try:
+            import PyQt6
+            version = importlib.metadata.version('PyQt6')
+            logger.info(f"PyQt6 {version} ✓")
+        except Exception:
+            logger.info("PyQt6 ✓")
         
-        import platformdirs
-        logger.info("platformdirs ✓")
+        # Verificar markdown
+        try:
+            import markdown
+            version = importlib.metadata.version('markdown')
+            logger.info(f"markdown {version} ✓")
+        except Exception:
+            logger.info("markdown ✓")
+        
+        # Verificar platformdirs
+        try:
+            import platformdirs
+            version = importlib.metadata.version('platformdirs')
+            logger.info(f"platformdirs {version} ✓")
+        except Exception:
+            logger.info("platformdirs ✓")
         
         return True
         
