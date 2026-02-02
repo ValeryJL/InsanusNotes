@@ -103,11 +103,6 @@ class PropertiesBlock(BaseBlock):
         self.btn_add = QPushButton("+ Agregar propiedad")
         self.btn_add.setObjectName("PropAddButton")
         self.btn_add.clicked.connect(self.add_prop_row)
-        
-        # En interfaces, deshabilitar el botón de agregar propiedades
-        if self.interface_mode or self.is_interface:
-            self.btn_add.setEnabled(False)
-            self.btn_add.setStyleSheet("background-color: #1a1a2e; color: #666666;")
 
         panel_layout.addWidget(self.btn_toggle)
         panel_layout.addWidget(self.props_container)
@@ -158,7 +153,8 @@ class PropertiesBlock(BaseBlock):
         key_edit.textChanged.connect(lambda text: self._validate_property_name(key_edit, text))
         key_edit.textChanged.connect(self.content_changed.emit)
         
-        # En interfaces, desabilitar edición de nombres
+        # En interfaces, desabilitar edición de nombres SOLO si ya existen
+        # Permitir crear nuevas propiedades con nombre editable
         if (self.interface_mode or self.is_interface) and key and key != "Implementa":
             key_edit.setReadOnly(True)
             key_edit.setStyleSheet("background-color: #1a1a2e; color: #888888;")
@@ -239,15 +235,11 @@ class PropertiesBlock(BaseBlock):
         type_combo.addItems(self.property_types)
         if p_type in self.property_types:
             type_combo.setCurrentText(p_type)
-        
-        # En interfaces, desabilitar el combo de tipo
-        if self.interface_mode or self.is_interface:
-            type_combo.setEnabled(False)
-            type_combo.setStyleSheet("background-color: #1a1a2e; color: #888888;")
             
         value_widget = self._build_value_widget(p_type, initial_value)
         
-        # En interfaces, desabilitar el widget de valor
+        # En interfaces, desabilitar SOLO el widget de valor (no el tipo)
+        # El tipo es parte de la definición de la interfaz
         if self.interface_mode or self.is_interface:
             value_widget.setEnabled(False)
             value_widget.setStyleSheet("background-color: #1a1a2e; color: #888888;")
