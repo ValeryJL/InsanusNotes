@@ -99,13 +99,12 @@ describe("Home autosave", () => {
       expect(pagesUpdate).toHaveBeenCalled();
     });
 
-    expect(pagesUpdate.mock.calls.length).toBeGreaterThan(0);
-    const firstCall = pagesUpdate.mock.calls[0];
-    if (!firstCall) {
+    type UpdatePayload = { title: string; content: { text: string } };
+    const calls = (pagesUpdate as jest.Mock).mock.calls as UpdatePayload[][];
+    const payload = calls[0]?.[0];
+    if (!payload) {
       throw new Error("pagesUpdate was not called");
     }
-
-    const payload = firstCall[0] as unknown;
     expect(payload).toEqual({
       title: "Nueva nota",
       content: { text: "Hola" },
