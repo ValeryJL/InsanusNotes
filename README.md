@@ -1,36 +1,78 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Insanus Notes MVP
 
-## Getting Started
+Minimal Notion-style MVP built with Next.js and Supabase.
 
-First, run the development server:
+## Architecture
+
+- **Next.js App Router** for the UI and client components.
+- **Supabase** for Postgres storage and JSONB content.
+- **Tailwind CSS** for the minimal interface styling.
+
+Key folders:
+
+- `src/app` - routes and state orchestration.
+- `src/components` - `Sidebar`, `NoteEditor`, `PropertyManager`.
+- `src/lib` - Supabase client.
+- `src/types` - shared TypeScript types.
+
+## Data Schema
+
+The app expects the following tables in Supabase:
+
+### `pages`
+
+- `id` (uuid, primary key)
+- `title` (text)
+- `content` (jsonb)
+
+### `custom_attributes` (properties)
+
+- `id` (uuid, primary key)
+- `page_id` (uuid, foreign key to `pages.id`)
+- `label` (text)
+- `value_type` (text, enum: `text`, `number`, `date`, `status`)
+- `value` (text)
+
+Relationship: `pages` has many `custom_attributes`.
+
+## Installation
+
+```bash
+git clone https://github.com/ValeryJL/InsanusNotes.git
+cd InsanusNotes
+npm install
+```
+
+Create a `.env.local` with:
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+Run the app:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Testing
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Run the unit tests:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm test
+```
 
-## Learn More
+Watch mode:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm run test:watch
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Contributing
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Use TypeScript strictly and keep components typed.
+- Prefer small, focused components in `src/components`.
+- Mock Supabase in tests to avoid network calls.
+- Run `npm test` and `npm run lint` before opening a PR.

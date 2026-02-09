@@ -26,6 +26,26 @@ export default function Home() {
     [notes, selectedId],
   );
 
+  const applyNoteToEditor = (note: Note | null) => {
+    if (!note) {
+      setTitle("");
+      setContentText("");
+      return;
+    }
+
+    const nextTitle = note.title ?? "";
+    const nextContent = note.content ?? EMPTY_CONTENT;
+    const nextText = typeof nextContent.text === "string" ? nextContent.text : "";
+
+    setTitle(nextTitle);
+    setContentText(nextText);
+  };
+
+  const handleSelectNote = (id: string) => {
+    setSelectedId(id);
+    applyNoteToEditor(notes.find((note) => note.id === id) ?? null);
+  };
+
   useEffect(() => {
     const loadNotes = async () => {
       const { data, error } = await supabase
@@ -42,8 +62,10 @@ export default function Home() {
       setNotes(nextNotes);
       if (nextNotes.length > 0) {
         setSelectedId(nextNotes[0].id);
+        applyNoteToEditor(nextNotes[0]);
         setStatusMessage("");
       } else {
+        applyNoteToEditor(null);
         setStatusMessage("Crea tu primera nota.");
       }
     };
@@ -73,21 +95,6 @@ export default function Home() {
 
     loadProperties();
   }, [selectedId]);
-
-  useEffect(() => {
-    if (!selectedNote) {
-      setTitle("");
-      setContentText("");
-      return;
-    }
-
-    const nextTitle = selectedNote.title ?? "";
-    const nextContent = selectedNote.content ?? EMPTY_CONTENT;
-    const nextText = typeof nextContent.text === "string" ? nextContent.text : "";
-
-    setTitle(nextTitle);
-    setContentText(nextText);
-  }, [selectedNote?.id]);
 
   useEffect(() => {
     if (!selectedNote) {
@@ -129,6 +136,9 @@ export default function Home() {
     };
   }, [title, contentText, selectedNote]);
 
+  /**
+   * Creates a new property definition for the selected page.
+   */
   const handleCreateProperty = async () => {
     if (!selectedId) {
       return;
@@ -159,6 +169,9 @@ export default function Home() {
     setNewPropertyType("text");
   };
 
+  /**
+   * Debounced property value persistence for custom attributes.
+   */
   const schedulePropertySave = (propertyId: string, value: string) => {
     const existing = propertyTimeoutsRef.current[propertyId];
     if (existing) {
@@ -173,6 +186,9 @@ export default function Home() {
     }, 1500);
   };
 
+  /**
+   * Updates local property state and schedules autosave.
+   */
   const handlePropertyValueChange = (propertyId: string, value: string) => {
     setProperties((prev) =>
       prev.map((property) =>
@@ -191,6 +207,9 @@ export default function Home() {
     };
   }, [selectedId]);
 
+  /**
+   * Creates a new note and focuses it for editing.
+   */
   const handleCreateNote = async () => {
     setIsSaving(true);
     const { data, error } = await supabase
@@ -209,6 +228,7 @@ export default function Home() {
     const newNote = data as Note;
     setNotes((prev) => [newNote, ...prev]);
     setSelectedId(newNote.id);
+    applyNoteToEditor(newNote);
     setStatusMessage("");
   };
 
@@ -218,7 +238,7 @@ export default function Home() {
         notes={notes}
         selectedId={selectedId}
         statusMessage={statusMessage}
-        onSelectNote={setSelectedId}
+        onSelectNote={handleSelectNote}
         onCreateNote={handleCreateNote}
       />
       <main className="flex flex-1 flex-col px-10 py-12">

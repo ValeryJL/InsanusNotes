@@ -13,6 +13,9 @@ type PropertyManagerProps = {
 const inputClassName =
   "w-full rounded-md border border-transparent bg-zinc-50/70 px-3 py-2 text-sm text-zinc-700 outline-none transition focus:border-zinc-200 focus:bg-white";
 
+/**
+ * Manages property creation and editing for the selected note.
+ */
 export default function PropertyManager({
   properties,
   newPropertyLabel,

@@ -9,4 +9,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
+/**
+ * Supabase browser client configured via public environment variables.
+ */
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);

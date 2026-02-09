@@ -19,6 +19,9 @@ type NoteEditorProps = {
   onCreateNote: () => void;
 };
 
+/**
+ * Notion-style editor layout with title, properties, and content.
+ */
 export default function NoteEditor({
   note,
   title,

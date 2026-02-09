@@ -8,6 +8,9 @@ type SidebarProps = {
   onCreateNote: () => void;
 };
 
+/**
+ * Renders the notes list and primary creation action.
+ */
 export default function Sidebar({
   notes,
   selectedId,
