@@ -9,21 +9,35 @@ type NoteContent = {
 };
 
 type Note = {
-  id: number;
+  id: string;
   title: string;
   content: NoteContent | null;
+};
+
+type PropertyType = "text" | "number" | "date" | "status";
+
+type Property = {
+  id: string;
+  page_id: string | null;
+  label: string;
+  value_type: PropertyType | null;
+  value: string | null;
 };
 
 const EMPTY_CONTENT: NoteContent = { text: "" };
 
 export default function Home() {
   const [notes, setNotes] = useState<Note[]>([]);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [contentText, setContentText] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [statusMessage, setStatusMessage] = useState("Cargando...");
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [newPropertyLabel, setNewPropertyLabel] = useState("");
+  const [newPropertyType, setNewPropertyType] = useState<PropertyType>("text");
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const propertyTimeoutsRef = useRef<Record<string, NodeJS.Timeout>>({});
 
   const selectedNote = useMemo(
     () => notes.find((note) => note.id === selectedId) ?? null,
@@ -54,6 +68,29 @@ export default function Home() {
 
     loadNotes();
   }, []);
+
+  useEffect(() => {
+    const loadProperties = async () => {
+      if (!selectedId) {
+        setProperties([]);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("custom_attributes")
+        .select("id, page_id, label, value_type, value")
+        .eq("page_id", selectedId)
+        .order("label", { ascending: true });
+
+      if (error) {
+        return;
+      }
+
+      setProperties((data ?? []) as Property[]);
+    };
+
+    loadProperties();
+  }, [selectedId]);
 
   useEffect(() => {
     if (!selectedNote) {
@@ -109,6 +146,59 @@ export default function Home() {
       }
     };
   }, [title, contentText, selectedNote]);
+
+  const handleCreateProperty = async () => {
+    if (!selectedId) {
+      return;
+    }
+
+    const trimmedLabel = newPropertyLabel.trim();
+    if (!trimmedLabel) {
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("custom_attributes")
+      .insert({
+        page_id: selectedId,
+        label: trimmedLabel,
+        value_type: newPropertyType,
+        value: "",
+      })
+      .select("id, page_id, label, value_type, value")
+      .single();
+
+    if (error || !data) {
+      return;
+    }
+
+    setProperties((prev) => [data as Property, ...prev]);
+    setNewPropertyLabel("");
+    setNewPropertyType("text");
+  };
+
+  const schedulePropertySave = (propertyId: string, value: string) => {
+    const existing = propertyTimeoutsRef.current[propertyId];
+    if (existing) {
+      clearTimeout(existing);
+    }
+
+    propertyTimeoutsRef.current[propertyId] = setTimeout(async () => {
+      await supabase
+        .from("custom_attributes")
+        .update({ value })
+        .eq("id", propertyId);
+    }, 1500);
+  };
+
+  const handlePropertyValueChange = (propertyId: string, value: string) => {
+    setProperties((prev) =>
+      prev.map((property) =>
+        property.id === propertyId ? { ...property, value } : property,
+      ),
+    );
+    schedulePropertySave(propertyId, value);
+  };
 
   const handleCreateNote = async () => {
     setIsSaving(true);
@@ -177,6 +267,98 @@ export default function Home() {
                 </li>
               ))}
             </ul>
+          )}
+        </div>
+        <div className="mt-6 border-t border-zinc-200 px-6 py-5">
+          <div className="flex items-center justify-between">
+            <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
+              Propiedades
+            </p>
+          </div>
+          {selectedNote ? (
+            <div className="mt-4 space-y-3">
+              <div className="space-y-2">
+                <input
+                  value={newPropertyLabel}
+                  onChange={(event) => setNewPropertyLabel(event.target.value)}
+                  placeholder="Nombre de propiedad"
+                  className="w-full rounded-md border border-zinc-200 px-3 py-2 text-sm text-zinc-700 outline-none transition focus:border-zinc-300"
+                />
+                <select
+                  value={newPropertyType}
+                  onChange={(event) =>
+                    setNewPropertyType(event.target.value as PropertyType)
+                  }
+                  className="w-full rounded-md border border-zinc-200 px-3 py-2 text-sm text-zinc-700 outline-none transition focus:border-zinc-300"
+                >
+                  <option value="text">Texto</option>
+                  <option value="number">Numero</option>
+                  <option value="date">Fecha</option>
+                  <option value="status">Estado</option>
+                </select>
+                <button
+                  type="button"
+                  onClick={handleCreateProperty}
+                  className="w-full rounded-md border border-zinc-200 px-3 py-2 text-sm text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-900"
+                >
+                  Agregar propiedad
+                </button>
+              </div>
+              {properties.length === 0 ? (
+                <p className="text-xs text-zinc-400">Sin propiedades.</p>
+              ) : (
+                <div className="space-y-3">
+                  {properties.map((property) => (
+                    <div key={property.id} className="space-y-1">
+                      <p className="text-xs font-medium text-zinc-500">
+                        {property.label}
+                      </p>
+                      {property.value_type === "date" ? (
+                        <input
+                          type="date"
+                          value={property.value ?? ""}
+                          onChange={(event) =>
+                            handlePropertyValueChange(
+                              property.id,
+                              event.target.value,
+                            )
+                          }
+                          className="w-full rounded-md border border-zinc-200 px-3 py-2 text-sm text-zinc-700 outline-none transition focus:border-zinc-300"
+                        />
+                      ) : property.value_type === "number" ? (
+                        <input
+                          type="number"
+                          value={property.value ?? ""}
+                          onChange={(event) =>
+                            handlePropertyValueChange(
+                              property.id,
+                              event.target.value,
+                            )
+                          }
+                          className="w-full rounded-md border border-zinc-200 px-3 py-2 text-sm text-zinc-700 outline-none transition focus:border-zinc-300"
+                        />
+                      ) : (
+                        <input
+                          type="text"
+                          value={property.value ?? ""}
+                          onChange={(event) =>
+                            handlePropertyValueChange(
+                              property.id,
+                              event.target.value,
+                            )
+                          }
+                          className="w-full rounded-md border border-zinc-200 px-3 py-2 text-sm text-zinc-700 outline-none transition focus:border-zinc-300"
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <p className="mt-3 text-xs text-zinc-400">
+              Selecciona una nota para editar propiedades.
+            </p>
           )}
         </div>
       </aside>
