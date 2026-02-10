@@ -24,12 +24,6 @@ export type PropertyDefinition = {
 export type PropertyReference = {
   nodeId: string;
   propertyId: string;
-  
-  /**
-   * Converts the PropertyReference to its string representation
-   * @returns string in format "nodeId#propertyId"
-   */
-  toString?: () => string;
 };
 
 /**

@@ -41,6 +41,31 @@ const getPropertiesRecord = (note: Note): Record<string, unknown> => {
 const toStringValue = (value: unknown) =>
   typeof value === "string" || typeof value === "number" ? `${value}` : "";
 
+/**
+ * Creates a unique key for relation search state
+ * Format: "noteId:propertyId"
+ * This is used to track search terms and results per note-property combination
+ */
+const createRelationKey = (noteId: string, propertyId: string): string => {
+  return `${noteId}:${propertyId}`;
+};
+
+/**
+ * Parses a relation key to extract note and property IDs
+ * @param key - Key in format "noteId:propertyId"
+ * @returns Object with noteId and propertyId, or null if invalid
+ */
+const parseRelationKey = (key: string): { noteId: string; propertyId: string } | null => {
+  const parts = key.split(':');
+  if (parts.length !== 2) {
+    return null;
+  }
+  return {
+    noteId: parts[0],
+    propertyId: parts[1],
+  };
+};
+
 export default function TableView({
   collectionId,
   variant = "page",
@@ -243,8 +268,9 @@ export default function TableView({
     }
 
     try {
-      // Extract noteId from the key (format: "noteId:propertyId")
-      const noteId = key.split(":")[0];
+      // Extract noteId from the key
+      const parsed = parseRelationKey(key);
+      const noteId = parsed?.noteId;
       const results = await searchNotes(
         value,
         collectionFilter ?? undefined,
@@ -279,7 +305,7 @@ export default function TableView({
     handleCellChange(note.id, propertyId, next);
     
     // Clear search term and close menu
-    const relationKey = `${note.id}:${propertyId}`;
+    const relationKey = createRelationKey(note.id, propertyId);
     setRelationSearch((prev) => ({ ...prev, [relationKey]: "" }));
     setRelationResults((prev) => ({ ...prev, [relationKey]: [] }));
   };
@@ -469,7 +495,7 @@ export default function TableView({
                   {schema.map((definition) => {
                     const rawValue = values[definition.id];
                     const stringValue = toStringValue(rawValue);
-                    const relationKey = `${note.id}:${definition.id}`;
+                    const relationKey = createRelationKey(note.id, definition.id);
 
                     if (definition.type === "bool") {
                       return (
