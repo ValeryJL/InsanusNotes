@@ -202,6 +202,15 @@ export default function NoteEditor({
   const handleRemoveBlock = (blockId: string) => {
     onBlocksChange(blocks.filter((b) => b.id !== blockId));
   };
+
+  const generateBlockId = () => {
+    if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+      return crypto.randomUUID();
+    }
+    return `block-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  };
+
+  const handleBlockKeyDown = (
     blockId: string,
     event: React.KeyboardEvent<HTMLInputElement>,
   ) => {
@@ -212,10 +221,7 @@ export default function NoteEditor({
       
       // Create new text block below
       const newBlock: ContentBlock = {
-        id:
-          typeof crypto !== "undefined" && "randomUUID" in crypto
-            ? crypto.randomUUID()
-            : `block-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        id: generateBlockId(),
         type: "paragraph",
         text: "",
       };
@@ -248,7 +254,6 @@ export default function NoteEditor({
       // Allow "/" to redefine empty blocks
       event.preventDefault();
       
-      const currentBlock = blocks[blockIndex];
       const textareaRect = event.currentTarget.getBoundingClientRect();
       const containerRect = containerRef.current?.getBoundingClientRect();
       
