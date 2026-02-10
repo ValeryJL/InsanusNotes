@@ -1,9 +1,11 @@
 import PropertyManager from "@/components/PropertyManager";
-import type { Note } from "@/types/database";
+import type { Note, PropertyDefinition } from "@/types/database";
 import type { Property, PropertyType } from "@/types";
 
 type NoteEditorProps = {
   note: Note | null;
+  schema: PropertyDefinition[] | null;
+  schemaValues: Record<string, unknown>;
   title: string;
   contentText: string;
   isSaving: boolean;
@@ -17,7 +19,9 @@ type NoteEditorProps = {
   onNewPropertyTypeChange: (value: PropertyType) => void;
   onCreateProperty: () => void;
   onPropertyValueChange: (propertyId: string, value: string) => void;
+  onSchemaValueChange: (propertyId: string, value: string | boolean) => void;
   onCreateNote: () => void;
+  onDeleteNote: () => void;
 };
 
 /**
@@ -25,6 +29,8 @@ type NoteEditorProps = {
  */
 export default function NoteEditor({
   note,
+  schema,
+  schemaValues,
   title,
   contentText,
   isSaving,
@@ -38,7 +44,9 @@ export default function NoteEditor({
   onNewPropertyTypeChange,
   onCreateProperty,
   onPropertyValueChange,
+  onSchemaValueChange,
   onCreateNote,
+  onDeleteNote,
 }: NoteEditorProps) {
   if (!note) {
     return (
@@ -66,9 +74,18 @@ export default function NoteEditor({
         <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
           Editor
         </p>
-        <span className="text-xs text-zinc-400">
-          {isSaving ? "Guardando..." : "Todo guardado"}
-        </span>
+        <div className="flex items-center gap-4">
+          <span className="text-xs text-zinc-400">
+            {isSaving ? "Guardando..." : "Todo guardado"}
+          </span>
+          <button
+            type="button"
+            onClick={onDeleteNote}
+            className="text-xs text-red-500 transition hover:text-red-600"
+          >
+            Eliminar
+          </button>
+        </div>
       </div>
       <input
         value={title}
@@ -77,6 +94,9 @@ export default function NoteEditor({
         className="mt-6 border-0 border-b border-transparent bg-transparent text-3xl font-semibold text-zinc-900 outline-none transition focus:border-zinc-200"
       />
       <PropertyManager
+        note={note}
+        schema={schema}
+        schemaValues={schemaValues}
         properties={properties}
         newPropertyLabel={newPropertyLabel}
         newPropertyType={newPropertyType}
@@ -84,6 +104,7 @@ export default function NoteEditor({
         onNewPropertyTypeChange={onNewPropertyTypeChange}
         onCreateProperty={onCreateProperty}
         onPropertyValueChange={onPropertyValueChange}
+        onSchemaValueChange={onSchemaValueChange}
       />
       <textarea
         value={contentText}

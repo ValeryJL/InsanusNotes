@@ -6,6 +6,16 @@ const COLLECTION_FIELDS =
 const NOTE_FIELDS =
   "id, user_id, collection_id, parent_id, title, content_jsonb, properties_jsonb, is_archived, created_at";
 
+const DEFAULT_USER_ID = process.env.NEXT_PUBLIC_SUPABASE_USER_ID;
+
+const getDefaultUserId = () => {
+  if (!DEFAULT_USER_ID) {
+    throw new Error("Missing NEXT_PUBLIC_SUPABASE_USER_ID");
+  }
+
+  return DEFAULT_USER_ID;
+};
+
 export const getCollections = async (): Promise<Collection[]> => {
   const { data, error } = await supabase
     .from("collections")
@@ -17,6 +27,22 @@ export const getCollections = async (): Promise<Collection[]> => {
   }
 
   return (data ?? []) as Collection[];
+};
+
+export const getCollectionById = async (
+  collectionId: string,
+): Promise<Collection> => {
+  const { data, error } = await supabase
+    .from("collections")
+    .select(COLLECTION_FIELDS)
+    .eq("id", collectionId)
+    .single();
+
+  if (error || !data) {
+    throw new Error(error?.message ?? "Collection not found");
+  }
+
+  return data as Collection;
 };
 
 export const getNotes = async (collectionId: string | null): Promise<Note[]> => {
@@ -38,7 +64,7 @@ export const getNotes = async (collectionId: string | null): Promise<Note[]> => 
 export const createCollection = async (name: string): Promise<Collection> => {
   const { data, error } = await supabase
     .from("collections")
-    .insert({ name, schema_json: [] })
+    .insert({ name, schema_json: [], user_id: getDefaultUserId() })
     .select(COLLECTION_FIELDS)
     .single();
 
@@ -49,14 +75,34 @@ export const createCollection = async (name: string): Promise<Collection> => {
   return data as Collection;
 };
 
+export const updateCollectionSchema = async (
+  collectionId: string,
+  schema: Collection["schema_json"],
+): Promise<Collection> => {
+  const { data, error } = await supabase
+    .from("collections")
+    .update({ schema_json: schema })
+    .eq("id", collectionId)
+    .select(COLLECTION_FIELDS)
+    .single();
+
+  if (error || !data) {
+    throw new Error(error?.message ?? "Failed to update schema");
+  }
+
+  return data as Collection;
+};
+
 export const createNote = async (collectionId: string | null): Promise<Note> => {
+  const properties = collectionId ? {} : [];
   const { data, error } = await supabase
     .from("notes")
     .insert({
       title: "Sin titulo",
       collection_id: collectionId,
+      user_id: getDefaultUserId(),
       content_jsonb: { text: "" },
-      properties_jsonb: [],
+      properties_jsonb: properties,
     })
     .select(NOTE_FIELDS)
     .single();
@@ -66,4 +112,12 @@ export const createNote = async (collectionId: string | null): Promise<Note> => 
   }
 
   return data as Note;
+};
+
+export const deleteNote = async (noteId: string): Promise<void> => {
+  const { error } = await supabase.from("notes").delete().eq("id", noteId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
 };

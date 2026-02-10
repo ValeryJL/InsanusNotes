@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import Home from "@/app/page";
+import * as api from "@/lib/api";
 
 const notesUpdate = jest.fn(() => ({
   eq: jest.fn(() => ({
@@ -48,6 +49,7 @@ jest.mock("@/lib/api", () => {
     getCollections: jest.fn().mockResolvedValue([]),
     createNote: jest.fn(),
     createCollection: jest.fn(),
+    deleteNote: jest.fn().mockResolvedValue(undefined),
   };
 });
 
@@ -58,19 +60,13 @@ jest.mock("@/lib/supabase", () => ({
 }));
 
 describe("Home autosave", () => {
-  beforeEach(() => {
-    jest.useFakeTimers();
-  });
-
   afterEach(() => {
-    act(() => {
-      jest.runOnlyPendingTimers();
-    });
-    jest.useRealTimers();
     jest.clearAllMocks();
+    jest.useRealTimers();
   });
 
   it("debounces autosave when updating title", async () => {
+    jest.useFakeTimers();
     await act(async () => {
       render(<Home />);
     });
@@ -109,5 +105,24 @@ describe("Home autosave", () => {
       content_jsonb: { text: "Hola" },
       properties_jsonb: [],
     });
+  });
+
+  it("deletes a note after confirmation", async () => {
+    jest.spyOn(window, "confirm").mockReturnValue(true);
+    await act(async () => {
+      render(<Home />);
+    });
+
+    await screen.findByDisplayValue("Nota 1");
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /eliminar/i }));
+    });
+
+    await waitFor(() => {
+      expect((api.deleteNote as jest.Mock)).toHaveBeenCalledWith("note-1");
+    });
+
+    expect(window.confirm).toHaveBeenCalled();
   });
 });

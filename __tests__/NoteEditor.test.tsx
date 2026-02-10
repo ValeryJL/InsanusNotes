@@ -21,6 +21,8 @@ describe("NoteEditor", () => {
     render(
       <NoteEditor
         note={note}
+        schema={null}
+        schemaValues={{}}
         title="Nota"
         contentText="Contenido"
         isSaving={false}
@@ -34,7 +36,9 @@ describe("NoteEditor", () => {
         onNewPropertyTypeChange={jest.fn()}
         onCreateProperty={jest.fn()}
         onPropertyValueChange={jest.fn()}
+        onSchemaValueChange={jest.fn()}
         onCreateNote={jest.fn()}
+        onDeleteNote={jest.fn()}
       />,
     );
 
@@ -55,6 +59,8 @@ describe("NoteEditor", () => {
     render(
       <NoteEditor
         note={null}
+        schema={null}
+        schemaValues={{}}
         title=""
         contentText=""
         isSaving={false}
@@ -68,7 +74,9 @@ describe("NoteEditor", () => {
         onNewPropertyTypeChange={jest.fn()}
         onCreateProperty={jest.fn()}
         onPropertyValueChange={jest.fn()}
+        onSchemaValueChange={jest.fn()}
         onCreateNote={onCreateNote}
+        onDeleteNote={jest.fn()}
       />,
     );
 

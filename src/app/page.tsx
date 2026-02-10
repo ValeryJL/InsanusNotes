@@ -3,9 +3,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import NoteEditor from "@/components/NoteEditor";
 import Sidebar from "@/components/Sidebar";
-import { createNote } from "@/lib/api";
+import { createNote, deleteNote } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
-import type { Collection, Note as DbNote } from "@/types/database";
+import type { Collection, Note as DbNote, PropertyDefinition } from "@/types/database";
 import type { Property, PropertyType } from "@/types";
 
 type NoteContent = {
@@ -27,6 +27,10 @@ export default function Home() {
   const [isSaving, setIsSaving] = useState(false);
   const [statusMessage, setStatusMessage] = useState("Cargando...");
   const [properties, setProperties] = useState<Property[]>([]);
+  const [schemaValues, setSchemaValues] = useState<Record<string, unknown>>({});
+  const [activeSchema, setActiveSchema] = useState<PropertyDefinition[] | null>(
+    null,
+  );
   const [newPropertyLabel, setNewPropertyLabel] = useState("");
   const [newPropertyType, setNewPropertyType] = useState<PropertyType>("text");
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -62,11 +66,29 @@ export default function Home() {
   useEffect(() => {
     if (!selectedNote) {
       setProperties([]);
+      setSchemaValues({});
+      setActiveSchema(null);
       return;
     }
 
-    setProperties(normalizeProperties(selectedNote.properties_jsonb));
-  }, [selectedNote]);
+    if (selectedNote.collection_id) {
+      const collection = collections.find(
+        (item) => item.id === selectedNote.collection_id,
+      );
+      setActiveSchema(collection?.schema_json ?? []);
+      const value = selectedNote.properties_jsonb;
+      setSchemaValues(
+        value && typeof value === "object" && !Array.isArray(value)
+          ? (value as Record<string, unknown>)
+          : {},
+      );
+      setProperties([]);
+    } else {
+      setActiveSchema(null);
+      setProperties(normalizeProperties(selectedNote.properties_jsonb));
+      setSchemaValues({});
+    }
+  }, [collections, selectedNote]);
 
   useEffect(() => {
     if (!selectedNote) {
@@ -81,10 +103,14 @@ export default function Home() {
       setIsSaving(true);
       const baseContent =
         (selectedNote.content_jsonb ?? EMPTY_CONTENT) as NoteContent;
+      const propertiesPayload = selectedNote.collection_id
+        ? schemaValues
+        : properties;
+
       const payload = {
         title: title.trim() || "Sin titulo",
         content_jsonb: { ...baseContent, text: contentText },
-        properties_jsonb: properties,
+        properties_jsonb: propertiesPayload,
       };
 
       const { data, error } = await supabase
@@ -108,13 +134,13 @@ export default function Home() {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [title, contentText, properties, selectedNote]);
+  }, [title, contentText, properties, schemaValues, selectedNote]);
 
   /**
    * Creates a new property definition for the selected note.
    */
   const handleCreateProperty = () => {
-    if (!selectedId) {
+    if (!selectedId || selectedNote?.collection_id) {
       return;
     }
 
@@ -152,6 +178,10 @@ export default function Home() {
     );
   };
 
+  const handleSchemaValueChange = (propertyId: string, value: string | boolean) => {
+    setSchemaValues((prev) => ({ ...prev, [propertyId]: value }));
+  };
+
   /**
    * Creates a new note and focuses it for editing.
    */
@@ -168,6 +198,30 @@ export default function Home() {
       setStatusMessage("No se pudo crear la nota.");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleDeleteNote = async () => {
+    if (!selectedNote) {
+      return;
+    }
+
+    const confirmed = window.confirm("Eliminar esta nota?");
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await deleteNote(selectedNote.id);
+      const remaining = notes.filter((note) => note.id !== selectedNote.id);
+      setNotes(remaining);
+      if (selectedId === selectedNote.id) {
+        const next = remaining[0] ?? null;
+        setSelectedId(next?.id ?? null);
+        applyNoteToEditor(next);
+      }
+    } catch (error) {
+      setStatusMessage("No se pudo eliminar la nota.");
     }
   };
 
@@ -207,6 +261,8 @@ export default function Home() {
       <main className="flex flex-1 flex-col px-10 py-12">
         <NoteEditor
           note={selectedNote}
+          schema={activeSchema}
+          schemaValues={schemaValues}
           title={title}
           contentText={contentText}
           isSaving={isSaving}
@@ -220,7 +276,9 @@ export default function Home() {
           onNewPropertyTypeChange={setNewPropertyType}
           onCreateProperty={handleCreateProperty}
           onPropertyValueChange={handlePropertyValueChange}
+          onSchemaValueChange={handleSchemaValueChange}
           onCreateNote={handleCreateNote}
+          onDeleteNote={handleDeleteNote}
         />
       </main>
     </div>
