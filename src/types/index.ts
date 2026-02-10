@@ -23,7 +23,7 @@ export type Note = {
   content: NoteContent | null;
 };
 
-export type PropertyType = "text" | "number" | "date" | "status";
+export type PropertyType = "text" | "number" | "date" | "status" | "relation";
 
 export type Property = {
   id: string;

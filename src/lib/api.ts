@@ -125,6 +125,7 @@ export const deleteNote = async (noteId: string): Promise<void> => {
 export const searchNotes = async (
   query: string,
   collectionId?: string,
+  excludeNoteId?: string,
 ): Promise<Note[]> => {
   if (!query.trim()) {
     return [];
@@ -138,6 +139,10 @@ export const searchNotes = async (
 
   if (collectionId) {
     request = request.eq("collection_id", collectionId);
+  }
+
+  if (excludeNoteId) {
+    request = request.neq("id", excludeNoteId);
   }
 
   const { data, error } = await request;

@@ -17,6 +17,7 @@ type TableViewProps = {
   collectionId: string;
   variant?: "page" | "embedded";
   onNavigateToNote?: (noteId: string) => void;
+  onRemoveBlock?: () => void;
 };
 
 const tableCellClass =
@@ -40,14 +41,41 @@ const getPropertiesRecord = (note: Note): Record<string, unknown> => {
 const toStringValue = (value: unknown) =>
   typeof value === "string" || typeof value === "number" ? `${value}` : "";
 
+/**
+ * Creates a unique key for relation search state
+ * Format: "noteId:propertyId"
+ * This is used to track search terms and results per note-property combination
+ */
+const createRelationKey = (noteId: string, propertyId: string): string => {
+  return `${noteId}:${propertyId}`;
+};
+
+/**
+ * Parses a relation key to extract note and property IDs
+ * @param key - Key in format "noteId:propertyId"
+ * @returns Object with noteId and propertyId, or null if invalid
+ */
+const parseRelationKey = (key: string): { noteId: string; propertyId: string } | null => {
+  const parts = key.split(':');
+  if (parts.length !== 2) {
+    return null;
+  }
+  return {
+    noteId: parts[0],
+    propertyId: parts[1],
+  };
+};
+
 export default function TableView({
   collectionId,
   variant = "page",
   onNavigateToNote,
+  onRemoveBlock,
 }: TableViewProps) {
   const [collection, setCollection] = useState<Collection | null>(null);
   const [notes, setNotes] = useState<Note[]>([]);
   const [statusMessage, setStatusMessage] = useState("Cargando...");
+  const [showMenu, setShowMenu] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showSchemaForm, setShowSchemaForm] = useState(false);
   const [allCollections, setAllCollections] = useState<Collection[]>([]);
@@ -240,7 +268,14 @@ export default function TableView({
     }
 
     try {
-      const results = await searchNotes(value, collectionFilter ?? undefined);
+      // Extract noteId from the key
+      const parsed = parseRelationKey(key);
+      const noteId = parsed?.noteId;
+      const results = await searchNotes(
+        value,
+        collectionFilter ?? undefined,
+        noteId,
+      );
       setRelationResults((prev) => ({ ...prev, [key]: results }));
     } catch (error) {
       setRelationResults((prev) => ({ ...prev, [key]: [] }));
@@ -268,6 +303,11 @@ export default function TableView({
     );
     setRelationLookup((prev) => ({ ...prev, [noteId]: related }));
     handleCellChange(note.id, propertyId, next);
+    
+    // Clear search term and close menu
+    const relationKey = createRelationKey(note.id, propertyId);
+    setRelationSearch((prev) => ({ ...prev, [relationKey]: "" }));
+    setRelationResults((prev) => ({ ...prev, [relationKey]: [] }));
   };
 
   if (!collectionId) {
@@ -281,9 +321,46 @@ export default function TableView({
   return (
     <div
       className={
-        isEmbedded ? "mt-6" : "min-h-screen bg-white px-10 py-12 text-zinc-900"
+        isEmbedded ? "relative mt-6" : "min-h-screen bg-white px-10 py-12 text-zinc-900"
       }
     >
+      {isEmbedded && onRemoveBlock ? (
+        <div className="absolute right-0 top-0 z-10">
+          <button
+            type="button"
+            onClick={() => setShowMenu((prev) => !prev)}
+            className="rounded-md p-2 text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-700"
+          >
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
+              />
+            </svg>
+          </button>
+          {showMenu ? (
+            <div className="absolute right-0 mt-1 w-40 rounded-lg border border-zinc-200 bg-white shadow-lg">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowMenu(false);
+                  onRemoveBlock();
+                }}
+                className="w-full px-4 py-2 text-left text-sm text-red-600 transition hover:bg-red-50"
+              >
+                Eliminar vista
+              </button>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
       {isEmbedded ? null : (
         <header className="flex items-start justify-between">
           <div>
@@ -418,7 +495,7 @@ export default function TableView({
                   {schema.map((definition) => {
                     const rawValue = values[definition.id];
                     const stringValue = toStringValue(rawValue);
-                    const relationKey = `${note.id}:${definition.id}`;
+                    const relationKey = createRelationKey(note.id, definition.id);
 
                     if (definition.type === "bool") {
                       return (
@@ -495,6 +572,16 @@ export default function TableView({
                                 definition.relation_collection_id,
                               )
                             }
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter" && relationResults[relationKey]?.[0]) {
+                                addRelationValue(
+                                  relationResults[relationKey][0].id,
+                                  definition.id,
+                                  note,
+                                  relationResults[relationKey][0],
+                                );
+                              }
+                            }}
                             placeholder="Buscar nota..."
                             className={inputClassName}
                           />
