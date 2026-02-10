@@ -102,7 +102,7 @@ describe("Home autosave", () => {
     }
     expect(payload).toEqual({
       title: "Nueva nota",
-      content_jsonb: { text: "Hola" },
+      content_jsonb: { text: "Hola", blocks: [] },
       properties_jsonb: [],
     });
   });

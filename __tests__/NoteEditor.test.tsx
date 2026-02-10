@@ -1,7 +1,9 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import NoteEditor from "@/components/NoteEditor";
-import type { Note } from "@/types/database";
+import type { Collection, Note } from "@/types/database";
 import type { Property } from "@/types";
+
+jest.mock("@/components/TableView", () => () => <div>TableView</div>);
 
 describe("NoteEditor", () => {
   const note: Note = {
@@ -13,6 +15,9 @@ describe("NoteEditor", () => {
   };
 
   const properties: Property[] = [];
+  const collections: Collection[] = [
+    { id: "collection-1", name: "Tareas", schema_json: [] },
+  ];
 
   it("renders note content and fires change handlers", () => {
     const onTitleChange = jest.fn();
@@ -23,6 +28,8 @@ describe("NoteEditor", () => {
         note={note}
         schema={null}
         schemaValues={{}}
+        blocks={[]}
+        collections={collections}
         title="Nota"
         contentText="Contenido"
         isSaving={false}
@@ -30,6 +37,7 @@ describe("NoteEditor", () => {
         newPropertyLabel=""
         newPropertyType="text"
         statusMessage=""
+        onBlocksChange={jest.fn()}
         onTitleChange={onTitleChange}
         onContentChange={onContentChange}
         onNewPropertyLabelChange={jest.fn()}
@@ -61,6 +69,8 @@ describe("NoteEditor", () => {
         note={null}
         schema={null}
         schemaValues={{}}
+        blocks={[]}
+        collections={collections}
         title=""
         contentText=""
         isSaving={false}
@@ -68,6 +78,7 @@ describe("NoteEditor", () => {
         newPropertyLabel=""
         newPropertyType="text"
         statusMessage=""
+        onBlocksChange={jest.fn()}
         onTitleChange={jest.fn()}
         onContentChange={jest.fn()}
         onNewPropertyLabelChange={jest.fn()}
@@ -82,5 +93,43 @@ describe("NoteEditor", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /crear nota/i }));
     expect(onCreateNote).toHaveBeenCalled();
+  });
+
+  it("opens command menu when typing slash", async () => {
+    render(
+      <NoteEditor
+        note={note}
+        schema={null}
+        schemaValues={{}}
+        blocks={[]}
+        collections={collections}
+        title="Nota"
+        contentText=""
+        isSaving={false}
+        properties={properties}
+        newPropertyLabel=""
+        newPropertyType="text"
+        statusMessage=""
+        onBlocksChange={jest.fn()}
+        onTitleChange={jest.fn()}
+        onContentChange={jest.fn()}
+        onNewPropertyLabelChange={jest.fn()}
+        onNewPropertyTypeChange={jest.fn()}
+        onCreateProperty={jest.fn()}
+        onPropertyValueChange={jest.fn()}
+        onSchemaValueChange={jest.fn()}
+        onCreateNote={jest.fn()}
+        onDeleteNote={jest.fn()}
+      />,
+    );
+
+    const contentInput = screen.getByPlaceholderText(
+      "Escribe tu contenido aqui...",
+    );
+    await act(async () => {
+      fireEvent.change(contentInput, { target: { value: "/" } });
+    });
+
+    expect(await screen.findByText("/tabla")).toBeInTheDocument();
   });
 });

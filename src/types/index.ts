@@ -1,6 +1,20 @@
 export type NoteContent = {
   text?: string;
+  blocks?: ContentBlock[];
   [key: string]: unknown;
+};
+
+export type ContentBlockType =
+  | "paragraph"
+  | "heading1"
+  | "heading2"
+  | "collection_view";
+
+export type ContentBlock = {
+  id: string;
+  type: ContentBlockType;
+  text?: string;
+  collectionId?: string;
 };
 
 export type Note = {

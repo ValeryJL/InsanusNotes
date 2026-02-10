@@ -5,13 +5,12 @@ import NoteEditor from "@/components/NoteEditor";
 import Sidebar from "@/components/Sidebar";
 import { createNote, deleteNote } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
-import type { Collection, Note as DbNote, PropertyDefinition } from "@/types/database";
-import type { Property, PropertyType } from "@/types";
-
-type NoteContent = {
-  text?: string;
-  [key: string]: unknown;
-};
+import type {
+  Collection,
+  Note as DbNote,
+  PropertyDefinition,
+} from "@/types/database";
+import type { ContentBlock, NoteContent, Property, PropertyType } from "@/types";
 
 const EMPTY_CONTENT: NoteContent = { text: "" };
 
@@ -31,6 +30,7 @@ export default function Home() {
   const [activeSchema, setActiveSchema] = useState<PropertyDefinition[] | null>(
     null,
   );
+  const [blocks, setBlocks] = useState<ContentBlock[]>([]);
   const [newPropertyLabel, setNewPropertyLabel] = useState("");
   const [newPropertyType, setNewPropertyType] = useState<PropertyType>("text");
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -44,15 +44,20 @@ export default function Home() {
     if (!note) {
       setTitle("");
       setContentText("");
+      setBlocks([]);
       return;
     }
 
     const nextTitle = note.title ?? "";
     const nextContent = (note.content_jsonb ?? EMPTY_CONTENT) as NoteContent;
     const nextText = typeof nextContent.text === "string" ? nextContent.text : "";
+    const nextBlocks = Array.isArray(nextContent.blocks)
+      ? (nextContent.blocks as ContentBlock[])
+      : [];
 
     setTitle(nextTitle);
     setContentText(nextText);
+    setBlocks(nextBlocks);
   };
 
   const handleSelectNote = useCallback(
@@ -109,7 +114,7 @@ export default function Home() {
 
       const payload = {
         title: title.trim() || "Sin titulo",
-        content_jsonb: { ...baseContent, text: contentText },
+        content_jsonb: { ...baseContent, text: contentText, blocks },
         properties_jsonb: propertiesPayload,
       };
 
@@ -134,7 +139,7 @@ export default function Home() {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [title, contentText, properties, schemaValues, selectedNote]);
+  }, [title, contentText, properties, schemaValues, blocks, selectedNote]);
 
   /**
    * Creates a new property definition for the selected note.
@@ -263,6 +268,8 @@ export default function Home() {
           note={selectedNote}
           schema={activeSchema}
           schemaValues={schemaValues}
+          blocks={blocks}
+          collections={collections}
           title={title}
           contentText={contentText}
           isSaving={isSaving}
@@ -270,6 +277,7 @@ export default function Home() {
           newPropertyLabel={newPropertyLabel}
           newPropertyType={newPropertyType}
           statusMessage={statusMessage}
+          onBlocksChange={setBlocks}
           onTitleChange={setTitle}
           onContentChange={setContentText}
           onNewPropertyLabelChange={setNewPropertyLabel}

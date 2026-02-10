@@ -4,7 +4,7 @@ import type { Collection, Note } from "@/types/database";
 const COLLECTION_FIELDS =
   "id, user_id, name, icon, description, schema_json, created_at";
 const NOTE_FIELDS =
-  "id, user_id, collection_id, parent_id, title, content_jsonb, properties_jsonb, is_archived, created_at";
+  "id, user_id, collection_id, parent_id, title, icon, content_jsonb, properties_jsonb, is_archived, created_at";
 
 const DEFAULT_USER_ID = process.env.NEXT_PUBLIC_SUPABASE_USER_ID;
 
@@ -120,4 +120,20 @@ export const deleteNote = async (noteId: string): Promise<void> => {
   if (error) {
     throw new Error(error.message);
   }
+};
+
+export const getBacklinks = async (noteId: string): Promise<Note[]> => {
+  const { data, error } = await supabase
+    .from("notes")
+    .select("id, title, icon, collection_id")
+    .or(
+      `content_jsonb::text.ilike.%${noteId}%,properties_jsonb::text.ilike.%${noteId}%`,
+    )
+    .neq("id", noteId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []) as Note[];
 };

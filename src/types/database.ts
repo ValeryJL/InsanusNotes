@@ -1,8 +1,9 @@
 export type PropertyDefinition = {
   id: string;
   name: string;
-  type: "text" | "number" | "date" | "bool" | "select";
+  type: "text" | "number" | "date" | "bool" | "select" | "relation";
   options?: string[];
+  relation_collection_id?: string | null;
 };
 
 export type Collection = {
@@ -21,6 +22,7 @@ export type Note = {
   collection_id: string | null;
   parent_id?: string | null;
   title: string | null;
+  icon?: string | null;
   content_jsonb?: Record<string, unknown> | null;
   properties_jsonb: Record<string, unknown> | unknown[] | null;
   is_archived?: boolean | null;
