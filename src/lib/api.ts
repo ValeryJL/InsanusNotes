@@ -122,6 +122,50 @@ export const deleteNote = async (noteId: string): Promise<void> => {
   }
 };
 
+export const searchNotes = async (
+  query: string,
+  collectionId?: string,
+): Promise<Note[]> => {
+  if (!query.trim()) {
+    return [];
+  }
+
+  let request = supabase
+    .from("notes")
+    .select("id, title, icon, collection_id")
+    .ilike("title", `%${query}%`)
+    .limit(10);
+
+  if (collectionId) {
+    request = request.eq("collection_id", collectionId);
+  }
+
+  const { data, error } = await request;
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []) as Note[];
+};
+
+export const getNotesByIds = async (ids: string[]): Promise<Note[]> => {
+  if (ids.length === 0) {
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from("notes")
+    .select("id, title, icon, collection_id")
+    .in("id", ids);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []) as Note[];
+};
+
 export const getBacklinks = async (noteId: string): Promise<Note[]> => {
   const { data, error } = await supabase
     .from("notes")

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import NoteEditor from "@/components/NoteEditor";
 import Sidebar from "@/components/Sidebar";
-import { createNote, deleteNote } from "@/lib/api";
+import { createNote, deleteNote, getBacklinks } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
 import type {
   Collection,
@@ -31,6 +31,7 @@ export default function Home() {
     null,
   );
   const [blocks, setBlocks] = useState<ContentBlock[]>([]);
+  const [backlinks, setBacklinks] = useState<DbNote[]>([]);
   const [newPropertyLabel, setNewPropertyLabel] = useState("");
   const [newPropertyType, setNewPropertyType] = useState<PropertyType>("text");
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -73,6 +74,7 @@ export default function Home() {
       setProperties([]);
       setSchemaValues({});
       setActiveSchema(null);
+      setBacklinks([]);
       return;
     }
 
@@ -94,6 +96,23 @@ export default function Home() {
       setSchemaValues({});
     }
   }, [collections, selectedNote]);
+
+  useEffect(() => {
+    if (!selectedNote) {
+      return;
+    }
+
+    const loadBacklinks = async () => {
+      try {
+        const links = await getBacklinks(selectedNote.id);
+        setBacklinks(links);
+      } catch (error) {
+        setBacklinks([]);
+      }
+    };
+
+    loadBacklinks();
+  }, [selectedNote]);
 
   useEffect(() => {
     if (!selectedNote) {
@@ -183,7 +202,10 @@ export default function Home() {
     );
   };
 
-  const handleSchemaValueChange = (propertyId: string, value: string | boolean) => {
+  const handleSchemaValueChange = (
+    propertyId: string,
+    value: string | boolean | string[],
+  ) => {
     setSchemaValues((prev) => ({ ...prev, [propertyId]: value }));
   };
 
@@ -251,6 +273,17 @@ export default function Home() {
     [selectedId],
   );
 
+    const handleNavigateToNote = (noteId: string) => {
+      const target = notes.find((note) => note.id === noteId) ?? null;
+      if (target) {
+        setSelectedId(target.id);
+        applyNoteToEditor(target);
+        return;
+      }
+
+      setStatusMessage("Nota referenciada no disponible en esta vista.");
+    };
+
   return (
     <div className="flex min-h-screen bg-white text-zinc-900">
       <Sidebar
@@ -270,6 +303,7 @@ export default function Home() {
           schemaValues={schemaValues}
           blocks={blocks}
           collections={collections}
+          backlinks={backlinks}
           title={title}
           contentText={contentText}
           isSaving={isSaving}
@@ -287,6 +321,7 @@ export default function Home() {
           onSchemaValueChange={handleSchemaValueChange}
           onCreateNote={handleCreateNote}
           onDeleteNote={handleDeleteNote}
+          onNavigateToNote={handleNavigateToNote}
         />
       </main>
     </div>

@@ -5,6 +5,7 @@ const updateSchemaMock = jest.fn();
 const createNoteMock = jest.fn();
 const getCollectionMock = jest.fn();
 const getNotesMock = jest.fn();
+const getCollectionsMock = jest.fn();
 
 jest.mock("next/navigation", () => ({
   useParams: () => ({ id: "collection-1" }),
@@ -15,6 +16,7 @@ jest.mock("@/lib/api", () => ({
   getNotes: (...args: unknown[]) => getNotesMock(...args),
   createNote: (...args: unknown[]) => createNoteMock(...args),
   updateCollectionSchema: (...args: unknown[]) => updateSchemaMock(...args),
+  getCollections: (...args: unknown[]) => getCollectionsMock(...args),
 }));
 
 const notesUpdate = jest.fn(() => ({
@@ -62,6 +64,9 @@ describe("Collection page", () => {
         { id: "priority", name: "Prioridad", type: "text" },
       ],
     });
+    getCollectionsMock.mockResolvedValue([
+      { id: "collection-1", name: "Tareas", schema_json: [] },
+    ]);
   });
 
   afterEach(() => {
@@ -82,7 +87,7 @@ describe("Collection page", () => {
       render(<CollectionPage />);
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /nueva fila/i }));
+    fireEvent.click(screen.getByRole("button", { name: /\+ nuevo/i }));
 
     await waitFor(() => {
       expect(createNoteMock).toHaveBeenCalledWith("collection-1");

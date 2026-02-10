@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import type { ChangeEvent } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import PropertyManager from "@/components/PropertyManager";
 import CommandMenu from "@/components/CommandMenu";
 import TableView from "@/components/TableView";
@@ -25,9 +26,14 @@ type NoteEditorProps = {
   onNewPropertyTypeChange: (value: PropertyType) => void;
   onCreateProperty: () => void;
   onPropertyValueChange: (propertyId: string, value: string) => void;
-  onSchemaValueChange: (propertyId: string, value: string | boolean) => void;
+  onSchemaValueChange: (
+    propertyId: string,
+    value: string | boolean | string[],
+  ) => void;
   onCreateNote: () => void;
   onDeleteNote: () => void;
+  onNavigateToNote?: (noteId: string) => void;
+  backlinks?: Note[];
 };
 
 /**
@@ -56,9 +62,22 @@ export default function NoteEditor({
   onSchemaValueChange,
   onCreateNote,
   onDeleteNote,
+  onNavigateToNote,
+  backlinks = [],
 }: NoteEditorProps) {
   const [isPropertiesOpen, setIsPropertiesOpen] = useState(true);
   const [isCommandOpen, setIsCommandOpen] = useState(false);
+  const [commandPosition, setCommandPosition] = useState<
+    { x: number; y: number } | null
+  >(null);
+  const [slashContext, setSlashContext] = useState<
+    { lineIndex: number; lineText: string } | null
+  >(null);
+  const [pendingFocusId, setPendingFocusId] = useState<string | null>(null);
+
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const blockRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const availableCollections = useMemo(() => collections, [collections]);
 
@@ -71,9 +90,31 @@ export default function NoteEditor({
     return `${value.slice(0, lastIndex)}${value.slice(lastIndex + 1)}`;
   };
 
-  const handleContentChange = (nextValue: string) => {
+  const handleContentChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
+    const nextValue = event.target.value;
     onContentChange(nextValue);
-    if (nextValue.endsWith("/")) {
+
+    const selectionStart = event.target.selectionStart ?? nextValue.length;
+    const justTypedSlash = nextValue[selectionStart - 1] === "/";
+
+    if (justTypedSlash) {
+      const beforeCursor = nextValue.slice(0, selectionStart);
+      const lineIndex = beforeCursor.split("\n").length - 1;
+      const lines = nextValue.split("\n");
+      const lineText = lines[lineIndex] ?? "";
+      setSlashContext({ lineIndex, lineText });
+
+      const textareaRect = event.target.getBoundingClientRect();
+      const containerRect = containerRef.current?.getBoundingClientRect();
+      const lineHeight = 24;
+      if (containerRect) {
+        const lineOffset = (lineIndex + 1) * lineHeight;
+        setCommandPosition({
+          x: textareaRect.left - containerRect.left + 12,
+          y: textareaRect.top - containerRect.top + lineOffset,
+        });
+      }
+
       setIsCommandOpen(true);
       return;
     }
@@ -83,23 +124,44 @@ export default function NoteEditor({
     }
   };
 
-  const handleCommandSelect = (
+  const transformCurrentLine = (
     type: ContentBlockType,
     collectionId?: string,
   ) => {
+    const lines = contentText.split("\n");
+    const targetIndex = slashContext?.lineIndex ?? lines.length - 1;
+    const rawLine = slashContext?.lineText ?? lines[targetIndex] ?? "";
+    const cleanLine = rawLine.replace(/\/[\w-]*$/, "").trim();
+    const nextText = lines.filter((_, index) => index !== targetIndex).join("\n");
+
     const nextBlock: ContentBlock = {
       id:
         typeof crypto !== "undefined" && "randomUUID" in crypto
           ? crypto.randomUUID()
           : `block-${Date.now()}-${Math.random().toString(16).slice(2)}`,
       type,
-      text: type === "collection_view" ? undefined : "",
+      text: type === "collection_view" ? undefined : cleanLine,
       collectionId,
     };
 
     onBlocksChange([...blocks, nextBlock]);
-    onContentChange(removeSlashTrigger(contentText));
+    onContentChange(removeSlashTrigger(nextText));
     setIsCommandOpen(false);
+    setSlashContext(null);
+
+    if (type === "collection_view") {
+      textareaRef.current?.focus();
+      return;
+    }
+
+    setPendingFocusId(nextBlock.id);
+  };
+
+  const handleCommandSelect = (
+    type: ContentBlockType,
+    collectionId?: string,
+  ) => {
+    transformCurrentLine(type, collectionId);
   };
 
   const handleBlockTextChange = (blockId: string, value: string) => {
@@ -109,6 +171,20 @@ export default function NoteEditor({
       ),
     );
   };
+
+  useEffect(() => {
+    if (!pendingFocusId) {
+      return;
+    }
+
+    const target = blockRefs.current[pendingFocusId];
+    if (target) {
+      target.focus();
+      target.selectionStart = target.value.length;
+      target.selectionEnd = target.value.length;
+      setPendingFocusId(null);
+    }
+  }, [pendingFocusId]);
   if (!note) {
     return (
       <div className="flex h-full flex-col items-center justify-center text-center">
@@ -130,7 +206,7 @@ export default function NoteEditor({
   }
 
   return (
-    <div className="relative flex h-full flex-col">
+    <div ref={containerRef} className="relative flex h-full flex-col">
       <div className="flex items-center justify-between">
         <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
           Editor
@@ -174,17 +250,20 @@ export default function NoteEditor({
           onCreateProperty={onCreateProperty}
           onPropertyValueChange={onPropertyValueChange}
           onSchemaValueChange={onSchemaValueChange}
+          onNavigateToNote={onNavigateToNote}
         />
       ) : null}
       <textarea
+        ref={textareaRef}
         value={contentText}
-        onChange={(event) => handleContentChange(event.target.value)}
+        onChange={handleContentChange}
         placeholder="Escribe tu contenido aqui..."
         className="mt-6 min-h-[420px] flex-1 resize-none border-0 bg-transparent text-base leading-7 text-zinc-700 outline-none"
       />
       <CommandMenu
         isOpen={isCommandOpen}
         collections={availableCollections}
+        position={commandPosition}
         onSelect={handleCommandSelect}
         onClose={() => setIsCommandOpen(false)}
       />
@@ -197,6 +276,7 @@ export default function NoteEditor({
                   <TableView
                     collectionId={block.collectionId}
                     variant="embedded"
+                    onNavigateToNote={onNavigateToNote}
                   />
                 </div>
               );
@@ -206,6 +286,9 @@ export default function NoteEditor({
               return (
                 <input
                   key={block.id}
+                  ref={(node) => {
+                    blockRefs.current[block.id] = node;
+                  }}
                   value={block.text ?? ""}
                   onChange={(event) =>
                     handleBlockTextChange(block.id, event.target.value)
@@ -220,6 +303,9 @@ export default function NoteEditor({
               return (
                 <input
                   key={block.id}
+                  ref={(node) => {
+                    blockRefs.current[block.id] = node;
+                  }}
                   value={block.text ?? ""}
                   onChange={(event) =>
                     handleBlockTextChange(block.id, event.target.value)
@@ -233,6 +319,9 @@ export default function NoteEditor({
             return (
               <input
                 key={block.id}
+                ref={(node) => {
+                  blockRefs.current[block.id] = node;
+                }}
                 value={block.text ?? ""}
                 onChange={(event) =>
                   handleBlockTextChange(block.id, event.target.value)
@@ -242,6 +331,29 @@ export default function NoteEditor({
               />
             );
           })}
+        </section>
+      ) : null}
+      {backlinks.length > 0 ? (
+        <section className="mt-10 border-t border-zinc-200 pt-6">
+          <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">
+            Vinculos a esta pagina
+          </p>
+          <div className="mt-3 space-y-2">
+            {backlinks.map((link) => (
+              <button
+                key={link.id}
+                type="button"
+                onClick={() => onNavigateToNote?.(link.id)}
+                className="flex w-full items-center justify-between rounded-lg border border-zinc-200 px-3 py-2 text-left text-sm text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-900"
+              >
+                <span className="font-medium">
+                  {link.icon ? `${link.icon} ` : ""}
+                  {link.title || "Sin titulo"}
+                </span>
+                <span className="text-xs text-zinc-400">Abrir</span>
+              </button>
+            ))}
+          </div>
         </section>
       ) : null}
     </div>

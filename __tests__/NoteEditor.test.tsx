@@ -4,6 +4,10 @@ import type { Collection, Note } from "@/types/database";
 import type { Property } from "@/types";
 
 jest.mock("@/components/TableView", () => () => <div>TableView</div>);
+jest.mock("@/lib/api", () => ({
+  searchNotes: jest.fn().mockResolvedValue([]),
+  getNotesByIds: jest.fn().mockResolvedValue([]),
+}));
 
 describe("NoteEditor", () => {
   const note: Note = {
@@ -30,6 +34,7 @@ describe("NoteEditor", () => {
         schemaValues={{}}
         blocks={[]}
         collections={collections}
+        backlinks={[]}
         title="Nota"
         contentText="Contenido"
         isSaving={false}
@@ -47,6 +52,7 @@ describe("NoteEditor", () => {
         onSchemaValueChange={jest.fn()}
         onCreateNote={jest.fn()}
         onDeleteNote={jest.fn()}
+        onNavigateToNote={jest.fn()}
       />,
     );
 
@@ -71,6 +77,7 @@ describe("NoteEditor", () => {
         schemaValues={{}}
         blocks={[]}
         collections={collections}
+        backlinks={[]}
         title=""
         contentText=""
         isSaving={false}
@@ -88,6 +95,7 @@ describe("NoteEditor", () => {
         onSchemaValueChange={jest.fn()}
         onCreateNote={onCreateNote}
         onDeleteNote={jest.fn()}
+        onNavigateToNote={jest.fn()}
       />,
     );
 
@@ -103,6 +111,7 @@ describe("NoteEditor", () => {
         schemaValues={{}}
         blocks={[]}
         collections={collections}
+        backlinks={[]}
         title="Nota"
         contentText=""
         isSaving={false}
@@ -120,6 +129,7 @@ describe("NoteEditor", () => {
         onSchemaValueChange={jest.fn()}
         onCreateNote={jest.fn()}
         onDeleteNote={jest.fn()}
+        onNavigateToNote={jest.fn()}
       />,
     );
 

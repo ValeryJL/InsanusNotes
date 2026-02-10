@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+import { getNotesByIds, searchNotes } from "@/lib/api";
 import type { Note, PropertyDefinition } from "@/types/database";
 import type { Property, PropertyType } from "@/types";
 
@@ -12,7 +14,11 @@ type PropertyManagerProps = {
   onNewPropertyTypeChange: (value: PropertyType) => void;
   onCreateProperty: () => void;
   onPropertyValueChange: (propertyId: string, value: string) => void;
-  onSchemaValueChange: (propertyId: string, value: string | boolean) => void;
+  onSchemaValueChange: (
+    propertyId: string,
+    value: string | boolean | string[],
+  ) => void;
+  onNavigateToNote?: (noteId: string) => void;
 };
 
 const inputClassName =
@@ -33,9 +39,83 @@ export default function PropertyManager({
   onCreateProperty,
   onPropertyValueChange,
   onSchemaValueChange,
+  onNavigateToNote,
 }: PropertyManagerProps) {
   const isCollectionNote = Boolean(note?.collection_id);
   const activeSchema = schema ?? [];
+  const [relationSearch, setRelationSearch] = useState<Record<string, string>>(
+    {},
+  );
+  const [relationResults, setRelationResults] = useState<
+    Record<string, Note[]>
+  >({});
+  const [relationLookup, setRelationLookup] = useState<Record<string, Note>>({});
+
+  useEffect(() => {
+    const relationIds = new Set<string>();
+    Object.values(schemaValues).forEach((value) => {
+      if (Array.isArray(value)) {
+        value.forEach((id) => {
+          if (typeof id === "string") {
+            relationIds.add(id);
+          }
+        });
+      }
+    });
+
+    const missing = Array.from(relationIds).filter(
+      (id) => !relationLookup[id],
+    );
+    if (missing.length === 0) {
+      return;
+    }
+
+    const load = async () => {
+      try {
+        const results = await getNotesByIds(missing);
+        setRelationLookup((prev) => {
+          const next = { ...prev };
+          results.forEach((item) => {
+            next[item.id] = item;
+          });
+          return next;
+        });
+      } catch (error) {
+        // ignore
+      }
+    };
+
+    load();
+  }, [relationLookup, schemaValues]);
+
+  const handleRelationSearch = async (
+    propertyId: string,
+    value: string,
+    collectionFilter?: string | null,
+  ) => {
+    setRelationSearch((prev) => ({ ...prev, [propertyId]: value }));
+    if (!value.trim()) {
+      setRelationResults((prev) => ({ ...prev, [propertyId]: [] }));
+      return;
+    }
+
+    try {
+      const results = await searchNotes(value, collectionFilter ?? undefined);
+      setRelationResults((prev) => ({ ...prev, [propertyId]: results }));
+    } catch (error) {
+      setRelationResults((prev) => ({ ...prev, [propertyId]: [] }));
+    }
+  };
+
+  const addRelationValue = (propertyId: string, noteId: string) => {
+    const existing = schemaValues[propertyId];
+    const next = Array.isArray(existing) ? existing.slice() : [];
+    if (!next.includes(noteId)) {
+      next.push(noteId);
+    }
+
+    onSchemaValueChange(propertyId, next);
+  };
 
   return (
     <section className="mt-6 space-y-4">
@@ -162,6 +242,68 @@ export default function PropertyManager({
                         </option>
                       ))}
                     </select>
+                  </div>
+                );
+              }
+
+              if (definition.type === "relation") {
+                const relationIds = Array.isArray(rawValue)
+                  ? rawValue.filter((id) => typeof id === "string")
+                  : [];
+                const relationNotes = relationIds.map(
+                  (id) => relationLookup[id] ?? { id, title: "" },
+                );
+
+                return (
+                  <div key={definition.id} className="contents">
+                    <p className="text-xs font-medium text-zinc-500">
+                      {definition.name}
+                    </p>
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap gap-2">
+                        {relationNotes.map((linked) => (
+                          <button
+                            key={linked.id}
+                            type="button"
+                            onClick={() => onNavigateToNote?.(linked.id)}
+                            className="inline-flex items-center rounded-full border border-zinc-200 px-2 py-0.5 text-xs text-zinc-600 transition hover:border-zinc-300"
+                          >
+                            {linked.title || linked.id}
+                          </button>
+                        ))}
+                      </div>
+                      <input
+                        value={relationSearch[definition.id] ?? ""}
+                        onChange={(event) =>
+                          handleRelationSearch(
+                            definition.id,
+                            event.target.value,
+                            definition.relation_collection_id,
+                          )
+                        }
+                        placeholder="Buscar nota..."
+                        className={inputClassName}
+                      />
+                      {relationResults[definition.id]?.length ? (
+                        <div className="rounded-lg border border-zinc-200 bg-white shadow-sm">
+                          {relationResults[definition.id].map((result) => (
+                            <button
+                              key={result.id}
+                              type="button"
+                              onClick={() =>
+                                addRelationValue(definition.id, result.id)
+                              }
+                              className="flex w-full items-center justify-between px-3 py-2 text-left text-xs text-zinc-600 hover:bg-zinc-50"
+                            >
+                              <span>{result.title || "Sin titulo"}</span>
+                              <span className="text-[10px] text-zinc-400">
+                                {result.id}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
                 );
               }

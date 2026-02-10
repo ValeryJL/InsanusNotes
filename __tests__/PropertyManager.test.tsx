@@ -3,6 +3,11 @@ import PropertyManager from "@/components/PropertyManager";
 import type { Note } from "@/types/database";
 import type { Property } from "@/types";
 
+jest.mock("@/lib/api", () => ({
+  searchNotes: jest.fn().mockResolvedValue([]),
+  getNotesByIds: jest.fn().mockResolvedValue([]),
+}));
+
 describe("PropertyManager", () => {
   const properties: Property[] = [
     {

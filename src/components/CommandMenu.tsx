@@ -5,6 +5,7 @@ import type { ContentBlockType } from "@/types";
 type CommandMenuProps = {
   isOpen: boolean;
   collections: Collection[];
+  position?: { x: number; y: number } | null;
   onSelect: (type: ContentBlockType, collectionId?: string) => void;
   onClose: () => void;
 };
@@ -15,6 +16,7 @@ const menuItemClass =
 export default function CommandMenu({
   isOpen,
   collections,
+  position,
   onSelect,
   onClose,
 }: CommandMenuProps) {
@@ -32,8 +34,15 @@ export default function CommandMenu({
     return null;
   }
 
+  const style = position
+    ? { left: position.x, top: position.y }
+    : { left: 0, top: 96 };
+
   return (
-    <div className="absolute left-0 top-24 z-20 w-72 rounded-xl border border-zinc-200 bg-white p-2 shadow-lg">
+    <div
+      className="absolute z-20 w-72 rounded-xl border border-zinc-200 bg-white p-2 shadow-lg"
+      style={style}
+    >
       {mode === "root" ? (
         <div className="space-y-1">
           <button

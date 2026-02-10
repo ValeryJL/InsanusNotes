@@ -50,6 +50,7 @@ jest.mock("@/lib/api", () => {
     createNote: jest.fn(),
     createCollection: jest.fn(),
     deleteNote: jest.fn().mockResolvedValue(undefined),
+    getBacklinks: jest.fn().mockResolvedValue([]),
   };
 });
 
