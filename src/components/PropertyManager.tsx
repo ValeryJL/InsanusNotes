@@ -100,7 +100,11 @@ export default function PropertyManager({
     }
 
     try {
-      const results = await searchNotes(value, collectionFilter ?? undefined);
+      const results = await searchNotes(
+        value,
+        collectionFilter ?? undefined,
+        note?.id,
+      );
       setRelationResults((prev) => ({ ...prev, [propertyId]: results }));
     } catch (error) {
       setRelationResults((prev) => ({ ...prev, [propertyId]: [] }));
@@ -115,6 +119,9 @@ export default function PropertyManager({
     }
 
     onSchemaValueChange(propertyId, next);
+    // Clear search term and close menu
+    setRelationSearch((prev) => ({ ...prev, [propertyId]: "" }));
+    setRelationResults((prev) => ({ ...prev, [propertyId]: [] }));
   };
 
   return (
@@ -146,6 +153,7 @@ export default function PropertyManager({
               <option value="number">Numero</option>
               <option value="date">Fecha</option>
               <option value="status">Estado</option>
+              <option value="relation">Relacion</option>
             </select>
           </div>
           <button
@@ -281,6 +289,11 @@ export default function PropertyManager({
                             definition.relation_collection_id,
                           )
                         }
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" && relationResults[definition.id]?.[0]) {
+                            addRelationValue(definition.id, relationResults[definition.id][0].id);
+                          }
+                        }}
                         placeholder="Buscar nota..."
                         className={inputClassName}
                       />

@@ -128,6 +128,33 @@ export default function NoteEditor({
     type: ContentBlockType,
     collectionId?: string,
   ) => {
+    // Check if we're transforming an existing block
+    if (slashContext && slashContext.lineIndex >= 0 && slashContext.lineIndex < blocks.length) {
+      // Redefining an existing block
+      const blockIndex = slashContext.lineIndex;
+      const nextBlocks = blocks.map((block, idx) => {
+        if (idx === blockIndex) {
+          return {
+            ...block,
+            type,
+            text: type === "collection_view" ? undefined : block.text,
+            collectionId: type === "collection_view" ? collectionId : undefined,
+          };
+        }
+        return block;
+      });
+      
+      onBlocksChange(nextBlocks);
+      setIsCommandOpen(false);
+      setSlashContext(null);
+      
+      if (type !== "collection_view") {
+        setPendingFocusId(blocks[blockIndex].id);
+      }
+      return;
+    }
+    
+    // Original logic for creating new blocks from textarea
     const lines = contentText.split("\n");
     const targetIndex = slashContext?.lineIndex ?? lines.length - 1;
     const rawLine = slashContext?.lineText ?? lines[targetIndex] ?? "";
@@ -170,6 +197,71 @@ export default function NoteEditor({
         block.id === blockId ? { ...block, text: value } : block,
       ),
     );
+  };
+
+  const handleRemoveBlock = (blockId: string) => {
+    onBlocksChange(blocks.filter((b) => b.id !== blockId));
+  };
+    blockId: string,
+    event: React.KeyboardEvent<HTMLInputElement>,
+  ) => {
+    const blockIndex = blocks.findIndex((b) => b.id === blockId);
+    
+    if (event.key === "Enter") {
+      event.preventDefault();
+      
+      // Create new text block below
+      const newBlock: ContentBlock = {
+        id:
+          typeof crypto !== "undefined" && "randomUUID" in crypto
+            ? crypto.randomUUID()
+            : `block-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        type: "paragraph",
+        text: "",
+      };
+      
+      const nextBlocks = [...blocks];
+      nextBlocks.splice(blockIndex + 1, 0, newBlock);
+      onBlocksChange(nextBlocks);
+      setPendingFocusId(newBlock.id);
+    } else if (event.key === "Backspace") {
+      const currentBlock = blocks[blockIndex];
+      
+      // Only delete if block is empty
+      if (!currentBlock.text || currentBlock.text.trim() === "") {
+        event.preventDefault();
+        
+        // Remove the current block
+        const nextBlocks = blocks.filter((b) => b.id !== blockId);
+        onBlocksChange(nextBlocks);
+        
+        // Focus previous block if it exists
+        if (blockIndex > 0) {
+          const prevBlockId = blocks[blockIndex - 1].id;
+          setPendingFocusId(prevBlockId);
+        } else {
+          // Focus textarea if no previous block
+          textareaRef.current?.focus();
+        }
+      }
+    } else if (event.key === "/" && event.currentTarget.value === "") {
+      // Allow "/" to redefine empty blocks
+      event.preventDefault();
+      
+      const currentBlock = blocks[blockIndex];
+      const textareaRect = event.currentTarget.getBoundingClientRect();
+      const containerRect = containerRef.current?.getBoundingClientRect();
+      
+      if (containerRect) {
+        setCommandPosition({
+          x: textareaRect.left - containerRect.left,
+          y: textareaRect.bottom - containerRect.top,
+        });
+      }
+      
+      setSlashContext({ lineIndex: blockIndex, lineText: "" });
+      setIsCommandOpen(true);
+    }
   };
 
   useEffect(() => {
@@ -268,7 +360,7 @@ export default function NoteEditor({
         onClose={() => setIsCommandOpen(false)}
       />
       {blocks.length > 0 ? (
-        <section className="mt-8 space-y-4">
+        <section className="mt-4 space-y-2">
           {blocks.map((block) => {
             if (block.type === "collection_view" && block.collectionId) {
               return (
@@ -277,6 +369,7 @@ export default function NoteEditor({
                     collectionId={block.collectionId}
                     variant="embedded"
                     onNavigateToNote={onNavigateToNote}
+                    onRemoveBlock={() => handleRemoveBlock(block.id)}
                   />
                 </div>
               );
@@ -293,7 +386,8 @@ export default function NoteEditor({
                   onChange={(event) =>
                     handleBlockTextChange(block.id, event.target.value)
                   }
-                  placeholder="Encabezado"
+                  onKeyDown={(event) => handleBlockKeyDown(block.id, event)}
+                  placeholder="Encabezado 1"
                   className="w-full border-0 bg-transparent text-2xl font-semibold text-zinc-900 outline-none"
                 />
               );
@@ -310,7 +404,8 @@ export default function NoteEditor({
                   onChange={(event) =>
                     handleBlockTextChange(block.id, event.target.value)
                   }
-                  placeholder="Subtitulo"
+                  onKeyDown={(event) => handleBlockKeyDown(block.id, event)}
+                  placeholder="Encabezado 2"
                   className="w-full border-0 bg-transparent text-xl font-semibold text-zinc-900 outline-none"
                 />
               );
@@ -326,7 +421,8 @@ export default function NoteEditor({
                 onChange={(event) =>
                   handleBlockTextChange(block.id, event.target.value)
                 }
-                placeholder="Parrafo"
+                onKeyDown={(event) => handleBlockKeyDown(block.id, event)}
+                placeholder="Texto"
                 className="w-full border-0 bg-transparent text-base text-zinc-700 outline-none"
               />
             );
