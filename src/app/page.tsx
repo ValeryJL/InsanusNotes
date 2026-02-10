@@ -1,15 +1,26 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import NoteEditor from "@/components/NoteEditor";
 import Sidebar from "@/components/Sidebar";
+import { createNote } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
-import type { Note, NoteContent, Property, PropertyType } from "@/types";
+import type { Collection, Note as DbNote } from "@/types/database";
+import type { Property, PropertyType } from "@/types";
+
+type NoteContent = {
+  text?: string;
+  [key: string]: unknown;
+};
 
 const EMPTY_CONTENT: NoteContent = { text: "" };
 
+const normalizeProperties = (value: unknown): Property[] =>
+  Array.isArray(value) ? (value as Property[]) : [];
+
 export default function Home() {
-  const [notes, setNotes] = useState<Note[]>([]);
+  const [notes, setNotes] = useState<DbNote[]>([]);
+  const [collections, setCollections] = useState<Collection[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [contentText, setContentText] = useState("");
@@ -19,14 +30,13 @@ export default function Home() {
   const [newPropertyLabel, setNewPropertyLabel] = useState("");
   const [newPropertyType, setNewPropertyType] = useState<PropertyType>("text");
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const propertyTimeoutsRef = useRef<Record<string, NodeJS.Timeout>>({});
 
   const selectedNote = useMemo(
     () => notes.find((note) => note.id === selectedId) ?? null,
     [notes, selectedId],
   );
 
-  const applyNoteToEditor = (note: Note | null) => {
+  const applyNoteToEditor = (note: DbNote | null) => {
     if (!note) {
       setTitle("");
       setContentText("");
@@ -34,67 +44,29 @@ export default function Home() {
     }
 
     const nextTitle = note.title ?? "";
-    const nextContent = note.content ?? EMPTY_CONTENT;
+    const nextContent = (note.content_jsonb ?? EMPTY_CONTENT) as NoteContent;
     const nextText = typeof nextContent.text === "string" ? nextContent.text : "";
 
     setTitle(nextTitle);
     setContentText(nextText);
   };
 
-  const handleSelectNote = (id: string) => {
-    setSelectedId(id);
-    applyNoteToEditor(notes.find((note) => note.id === id) ?? null);
-  };
+  const handleSelectNote = useCallback(
+    (id: string) => {
+      setSelectedId(id);
+      applyNoteToEditor(notes.find((note) => note.id === id) ?? null);
+    },
+    [notes],
+  );
 
   useEffect(() => {
-    const loadNotes = async () => {
-      const { data, error } = await supabase
-        .from("pages")
-        .select("id, title, content")
-        .order("id", { ascending: true });
+    if (!selectedNote) {
+      setProperties([]);
+      return;
+    }
 
-      if (error) {
-        setStatusMessage("No se pudieron cargar las notas.");
-        return;
-      }
-
-      const nextNotes = (data ?? []) as Note[];
-      setNotes(nextNotes);
-      if (nextNotes.length > 0) {
-        setSelectedId(nextNotes[0].id);
-        applyNoteToEditor(nextNotes[0]);
-        setStatusMessage("");
-      } else {
-        applyNoteToEditor(null);
-        setStatusMessage("Crea tu primera nota.");
-      }
-    };
-
-    loadNotes();
-  }, []);
-
-  useEffect(() => {
-    const loadProperties = async () => {
-      if (!selectedId) {
-        setProperties([]);
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from("custom_attributes")
-        .select("id, page_id, label, value_type, value")
-        .eq("page_id", selectedId)
-        .order("label", { ascending: true });
-
-      if (error) {
-        return;
-      }
-
-      setProperties((data ?? []) as Property[]);
-    };
-
-    loadProperties();
-  }, [selectedId]);
+    setProperties(normalizeProperties(selectedNote.properties_jsonb));
+  }, [selectedNote]);
 
   useEffect(() => {
     if (!selectedNote) {
@@ -107,22 +79,24 @@ export default function Home() {
 
     saveTimeoutRef.current = setTimeout(async () => {
       setIsSaving(true);
-      const baseContent = selectedNote.content ?? EMPTY_CONTENT;
+      const baseContent =
+        (selectedNote.content_jsonb ?? EMPTY_CONTENT) as NoteContent;
       const payload = {
         title: title.trim() || "Sin titulo",
-        content: { ...baseContent, text: contentText },
+        content_jsonb: { ...baseContent, text: contentText },
+        properties_jsonb: properties,
       };
 
       const { data, error } = await supabase
-        .from("pages")
+        .from("notes")
         .update(payload)
         .eq("id", selectedNote.id)
-        .select("id, title, content")
+        .select("id, title, content_jsonb, properties_jsonb, collection_id")
         .single();
 
       if (!error && data) {
         setNotes((prev) =>
-          prev.map((note) => (note.id === data.id ? (data as Note) : note)),
+          prev.map((note) => (note.id === data.id ? (data as DbNote) : note)),
         );
       }
 
@@ -134,12 +108,12 @@ export default function Home() {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [title, contentText, selectedNote]);
+  }, [title, contentText, properties, selectedNote]);
 
   /**
-   * Creates a new property definition for the selected page.
+   * Creates a new property definition for the selected note.
    */
-  const handleCreateProperty = async () => {
+  const handleCreateProperty = () => {
     if (!selectedId) {
       return;
     }
@@ -149,45 +123,26 @@ export default function Home() {
       return;
     }
 
-    const { data, error } = await supabase
-      .from("custom_attributes")
-      .insert({
-        page_id: selectedId,
-        label: trimmedLabel,
-        value_type: newPropertyType,
-        value: "",
-      })
-      .select("id, page_id, label, value_type, value")
-      .single();
+    const id =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `prop-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
-    if (error || !data) {
-      return;
-    }
+    const nextProperty: Property = {
+      id,
+      page_id: selectedId,
+      label: trimmedLabel,
+      value_type: newPropertyType,
+      value: "",
+    };
 
-    setProperties((prev) => [data as Property, ...prev]);
+    setProperties((prev) => [nextProperty, ...prev]);
     setNewPropertyLabel("");
     setNewPropertyType("text");
   };
 
   /**
-   * Debounced property value persistence for custom attributes.
-   */
-  const schedulePropertySave = (propertyId: string, value: string) => {
-    const existing = propertyTimeoutsRef.current[propertyId];
-    if (existing) {
-      clearTimeout(existing);
-    }
-
-    propertyTimeoutsRef.current[propertyId] = setTimeout(async () => {
-      await supabase
-        .from("custom_attributes")
-        .update({ value })
-        .eq("id", propertyId);
-    }, 1500);
-  };
-
-  /**
-   * Updates local property state and schedules autosave.
+   * Updates local property state and lets autosave persist it.
    */
   const handlePropertyValueChange = (propertyId: string, value: string) => {
     setProperties((prev) =>
@@ -195,51 +150,59 @@ export default function Home() {
         property.id === propertyId ? { ...property, value } : property,
       ),
     );
-    schedulePropertySave(propertyId, value);
   };
-
-  useEffect(() => {
-    return () => {
-      Object.values(propertyTimeoutsRef.current).forEach((timeoutId) => {
-        clearTimeout(timeoutId);
-      });
-      propertyTimeoutsRef.current = {};
-    };
-  }, [selectedId]);
 
   /**
    * Creates a new note and focuses it for editing.
    */
   const handleCreateNote = async () => {
     setIsSaving(true);
-    const { data, error } = await supabase
-      .from("pages")
-      .insert({ title: "Sin titulo", content: EMPTY_CONTENT })
-      .select("id, title, content")
-      .single();
-
-    setIsSaving(false);
-
-    if (error || !data) {
+    try {
+      const newNote = await createNote(null);
+      setNotes((prev) => [newNote, ...prev]);
+      setSelectedId(newNote.id);
+      applyNoteToEditor(newNote);
+      setProperties(normalizeProperties(newNote.properties_jsonb));
+      setStatusMessage("");
+    } catch (error) {
       setStatusMessage("No se pudo crear la nota.");
-      return;
+    } finally {
+      setIsSaving(false);
     }
-
-    const newNote = data as Note;
-    setNotes((prev) => [newNote, ...prev]);
-    setSelectedId(newNote.id);
-    applyNoteToEditor(newNote);
-    setStatusMessage("");
   };
+
+  const handleNotesLoaded = useCallback(
+    (loadedNotes: DbNote[]) => {
+      setNotes(loadedNotes);
+
+      if (loadedNotes.length === 0) {
+        setSelectedId(null);
+        applyNoteToEditor(null);
+        return;
+      }
+
+      const nextSelected =
+        (selectedId
+          ? loadedNotes.find((note) => note.id === selectedId)
+          : null) ?? loadedNotes[0];
+
+      setSelectedId(nextSelected.id);
+      applyNoteToEditor(nextSelected);
+    },
+    [selectedId],
+  );
 
   return (
     <div className="flex min-h-screen bg-white text-zinc-900">
       <Sidebar
         notes={notes}
-        selectedId={selectedId}
+        collections={collections}
+        selectedNoteId={selectedId}
         statusMessage={statusMessage}
         onSelectNote={handleSelectNote}
-        onCreateNote={handleCreateNote}
+        onNotesLoaded={handleNotesLoaded}
+        onCollectionsLoaded={setCollections}
+        onStatusMessageChange={setStatusMessage}
       />
       <main className="flex flex-1 flex-col px-10 py-12">
         <NoteEditor

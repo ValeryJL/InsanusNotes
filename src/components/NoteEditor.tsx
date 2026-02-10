@@ -1,5 +1,6 @@
 import PropertyManager from "@/components/PropertyManager";
-import { Note, Property, PropertyType } from "@/types";
+import type { Note } from "@/types/database";
+import type { Property, PropertyType } from "@/types";
 
 type NoteEditorProps = {
   note: Note | null;

@@ -1,12 +1,15 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import NoteEditor from "@/components/NoteEditor";
-import type { Note, Property } from "@/types";
+import type { Note } from "@/types/database";
+import type { Property } from "@/types";
 
 describe("NoteEditor", () => {
   const note: Note = {
     id: "note-1",
     title: "Nota",
-    content: { text: "Contenido" },
+    collection_id: null,
+    content_jsonb: { text: "Contenido" },
+    properties_jsonb: [],
   };
 
   const properties: Property[] = [];

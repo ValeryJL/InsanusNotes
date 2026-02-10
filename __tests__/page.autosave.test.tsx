@@ -1,51 +1,27 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import Home from "@/app/page";
 
-const mockNotes = [
-  {
-    id: "note-1",
-    title: "Nota 1",
-    content: { text: "Hola" },
-  },
-];
-
-const pagesSelect = jest.fn(() => ({
-  order: jest.fn().mockResolvedValue({ data: mockNotes, error: null }),
-}));
-
-const pagesUpdate = jest.fn(() => ({
+const notesUpdate = jest.fn(() => ({
   eq: jest.fn(() => ({
     select: jest.fn(() => ({
       single: jest.fn().mockResolvedValue({
-        data: { id: "note-1", title: "Actualizada", content: { text: "Hola" } },
+        data: {
+          id: "note-1",
+          title: "Actualizada",
+          collection_id: null,
+          content_jsonb: { text: "Hola" },
+          properties_jsonb: [],
+        },
         error: null,
       }),
     })),
   })),
 }));
 
-const customAttributesSelect = jest.fn(() => ({
-  eq: jest.fn(() => ({
-    order: jest.fn().mockResolvedValue({ data: [], error: null }),
-  })),
-}));
-
 const mockFrom = jest.fn((table: string) => {
-  if (table === "pages") {
+  if (table === "notes") {
     return {
-      select: pagesSelect,
-      update: pagesUpdate,
-      insert: jest.fn(),
-    };
-  }
-
-  if (table === "custom_attributes") {
-    return {
-      select: customAttributesSelect,
-      insert: jest.fn(),
-      update: jest.fn(() => ({
-        eq: jest.fn().mockResolvedValue({ data: null, error: null }),
-      })),
+      update: notesUpdate,
     };
   }
 
@@ -53,6 +29,25 @@ const mockFrom = jest.fn((table: string) => {
     select: jest.fn(),
     update: jest.fn(),
     insert: jest.fn(),
+  };
+});
+
+jest.mock("@/lib/api", () => {
+  const mockNotes = [
+    {
+      id: "note-1",
+      title: "Nota 1",
+      collection_id: null,
+      content_jsonb: { text: "Hola" },
+      properties_jsonb: [],
+    },
+  ];
+
+  return {
+    getNotes: jest.fn().mockResolvedValue(mockNotes),
+    getCollections: jest.fn().mockResolvedValue([]),
+    createNote: jest.fn(),
+    createCollection: jest.fn(),
   };
 });
 
@@ -89,25 +84,30 @@ describe("Home autosave", () => {
       jest.advanceTimersByTime(1499);
     });
 
-    expect(pagesUpdate).not.toHaveBeenCalled();
+    expect(notesUpdate).not.toHaveBeenCalled();
 
     act(() => {
       jest.advanceTimersByTime(1);
     });
 
     await waitFor(() => {
-      expect(pagesUpdate).toHaveBeenCalled();
+      expect(notesUpdate).toHaveBeenCalled();
     });
 
-    type UpdatePayload = { title: string; content: { text: string } };
-    const calls = (pagesUpdate as jest.Mock).mock.calls as UpdatePayload[][];
+    type UpdatePayload = {
+      title: string;
+      content_jsonb: { text: string };
+      properties_jsonb: unknown[];
+    };
+    const calls = (notesUpdate as jest.Mock).mock.calls as UpdatePayload[][];
     const payload = calls[0]?.[0];
     if (!payload) {
-      throw new Error("pagesUpdate was not called");
+      throw new Error("notesUpdate was not called");
     }
     expect(payload).toEqual({
       title: "Nueva nota",
-      content: { text: "Hola" },
+      content_jsonb: { text: "Hola" },
+      properties_jsonb: [],
     });
   });
 });
