@@ -217,6 +217,39 @@
     </main>
   </div>
 
+  <!-- Settings Modal -->
+  <div class="modal-overlay" id="settingsModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 class="modal-title">Configuración</h2>
+        <button class="icon-btn" id="settingsModalClose" title="Cerrar">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="settings-group">
+          <h3>Personalización</h3>
+          <p class="settings-desc">Color principal de acento</p>
+          <input type="color" id="themeColorPicker" value="#00f0ff">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Icon Picker Modal -->
+  <div class="modal-overlay" id="iconModal" style="z-index: 2000;">
+    <div class="modal" style="width: 500px; max-width: 90vw;">
+      <div class="modal-header">
+        <h2 class="modal-title">Seleccionar Icono</h2>
+        <button class="icon-btn" id="iconModalClose" title="Cerrar">✕</button>
+      </div>
+      <div class="modal-body" style="display: flex; flex-direction: column; gap: 16px;">
+        <input type="text" id="emojiSearch" placeholder="🔍 Buscar icono (ej: car, smile, dog)..." style="width: 100%; font-size: 1.1rem; padding: 12px; border: 1px solid var(--border-color); border-radius: var(--border-radius-md); background: var(--bg-tertiary); color: var(--text-color);">
+        <div id="emojiList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(40px, 1fr)); gap: 8px; max-height: 50vh; overflow-y: auto; padding-right: 4px;">
+          <!-- JS populates emojis -->
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL: CREAR/EDITAR CUADERNO -->
   <div class="modal-overlay" id="notebookModal">
     <div class="modal">
@@ -284,13 +317,6 @@
               <input type="hidden" id="appIconField" value="🚀">
               <span style="font-size: 0.8rem; color: var(--text-muted);">Click para cambiar</span>
             </div>
-            <!-- Dropdown Menu -->
-            <div id="emojiDropdown" style="display: none; position: absolute; top: 100%; left: 0; margin-top: 4px; width: 250px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--border-radius-md); box-shadow: 0 4px 12px rgba(0,0,0,0.5); z-index: 1000; padding: 8px; flex-direction: column; gap: 8px;">
-              <input type="text" id="emojiSearch" placeholder="Buscar icono..." style="width: 100%; font-size: 0.9rem; padding: 4px 8px;">
-              <div id="emojiList" style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; max-height: 150px; overflow-y: auto;">
-                <!-- JS populates emojis -->
-              </div>
-            </div>
           </div>
           <div class="form-group">
             <label>Color de Tarjeta</label>
@@ -328,6 +354,7 @@
     </button>
   </div>
 
+  <script src="emojis.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

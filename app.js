@@ -1574,47 +1574,33 @@ function deleteApp(id) {
 
 // --- EMOJI PICKER & FAVICON FETCH ---
 const appIconButton = document.getElementById("appIconButton");
-const emojiDropdown = document.getElementById("emojiDropdown");
 const emojiSearch = document.getElementById("emojiSearch");
 const emojiList = document.getElementById("emojiList");
+const iconModal = document.getElementById("iconModal");
+const iconModalClose = document.getElementById("iconModalClose");
 
-const emojiData = [
-  { char: '🚀', name: 'cohete rocket' },
-  { char: '🌐', name: 'web internet globo globe' },
-  { char: '💻', name: 'computadora pc laptop' },
-  { char: '📱', name: 'celular telefono mobile phone' },
-  { char: '🎮', name: 'juego game consola console' },
-  { char: '🎵', name: 'musica nota music note' },
-  { char: '📝', name: 'nota escribir note edit' },
-  { char: '✨', name: 'brillo estrellas sparkles' },
-  { char: '🔥', name: 'fuego fire' },
-  { char: '⚙️', name: 'configuracion engranaje settings gear' },
-  { char: '📊', name: 'grafico estadisticas chart stats' },
-  { char: '🖼️', name: 'imagen foto image picture' },
-  { char: '📁', name: 'carpeta folder' },
-  { char: '💬', name: 'chat mensaje message' },
-  { char: '📧', name: 'email correo envelope' },
-  { char: '📅', name: 'calendario calendar' },
-  { char: '🛒', name: 'compras carrito cart shopping' },
-  { char: '💰', name: 'dinero plata money' },
-  { char: '💡', name: 'idea luz bulb' },
-  { char: '🔒', name: 'seguridad candado lock security' }
-];
+let currentFavicon = null;
 
 function renderEmojiList(filter = "") {
   if (!emojiList) return;
   emojiList.innerHTML = "";
-  const filtered = emojiData.filter(e => e.name.includes(filter.toLowerCase()));
+  
+  let sourceList = typeof systemEmojis !== 'undefined' ? systemEmojis : [];
+  if (currentFavicon && !sourceList.some(e => e.char === currentFavicon.char)) {
+    sourceList = [currentFavicon, ...sourceList];
+  }
+  
+  const filtered = sourceList.filter(e => e.name.toLowerCase().includes(filter.toLowerCase())).slice(0, 200);
   filtered.forEach(e => {
     const el = document.createElement("div");
-    el.innerHTML = e.char;
-    el.style.cssText = "font-size: 1.5rem; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 4px; padding: 4px;";
+    el.innerHTML = renderAppIcon(e.char);
+    el.style.cssText = "font-size: 1.5rem; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 4px; padding: 4px; width: 40px; height: 40px;";
     el.onmouseenter = () => el.style.background = "var(--card-hover-bg)";
     el.onmouseleave = () => el.style.background = "transparent";
     el.onclick = () => {
       appIconField.value = e.char;
       appIconButton.innerHTML = renderAppIcon(e.char);
-      emojiDropdown.style.display = "none";
+      closeModal(iconModal);
     };
     emojiList.appendChild(el);
   });
@@ -1622,24 +1608,19 @@ function renderEmojiList(filter = "") {
 
 if (appIconButton) {
   appIconButton.addEventListener("click", (e) => {
-    e.stopPropagation();
-    const isVisible = emojiDropdown.style.display === "flex";
-    emojiDropdown.style.display = isVisible ? "none" : "flex";
-    if (!isVisible) {
-      renderEmojiList(emojiSearch.value);
-      emojiSearch.focus();
-    }
+    e.preventDefault();
+    openModal(iconModal);
+    renderEmojiList("");
+    emojiSearch.value = "";
+    setTimeout(() => emojiSearch.focus(), 100);
   });
+
+  if (iconModalClose) {
+    iconModalClose.addEventListener("click", () => closeModal(iconModal));
+  }
 
   emojiSearch.addEventListener("input", (e) => {
     renderEmojiList(e.target.value);
-  });
-
-  // Close dropdown if click outside
-  document.addEventListener("click", (e) => {
-    if (emojiDropdown.style.display === "flex" && !emojiDropdown.contains(e.target) && e.target !== appIconButton) {
-      emojiDropdown.style.display = "none";
-    }
   });
 }
 
@@ -1660,7 +1641,18 @@ function showAppForm(id = null) {
     if (match) match.classList.add("active");
     else colorOpts[0].classList.add("active");
     appIconButton.innerHTML = renderAppIcon(app.icon);
+    
+    // Reset favicon for new app or set current for existing
+    currentFavicon = null;
+    if (app.icon) {
+      const isUrl = app.icon.startsWith('http');
+      if (isUrl) {
+        currentFavicon = { char: app.icon, name: 'icono custom url web favicon' };
+      }
+    }
+    renderEmojiList("");
   } else {
+    currentFavicon = null;
     appModalTitle.textContent = "Agregar App / Enlace";
     appIdField.value = "";
     appNameField.value = "";
@@ -1668,6 +1660,7 @@ function showAppForm(id = null) {
     appIconField.value = "🚀";
     appIconButton.innerHTML = renderAppIcon("🚀");
     colorOpts[0].classList.add("active");
+    renderEmojiList("");
   }
 
   openModal(appModal);
@@ -1807,33 +1800,38 @@ function setupEventListeners() {
       if (!urlStr) return;
       const urlObj = new URL(urlStr.startsWith('http') ? urlStr : 'https://' + urlStr);
       const origin = urlObj.origin;
-      
-      const response = await fetch(origin);
-      const text = await response.text();
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(text, 'text/html');
+      const domain = urlObj.hostname;
       
       let favicon = null;
-      const links = doc.querySelectorAll("link[rel*='icon']");
-      if (links.length > 0) {
-        let href = links[0].getAttribute("href");
-        favicon = new URL(href, origin).href;
-      } else {
-        favicon = origin + "/favicon.ico";
+      try {
+        const response = await fetch(origin);
+        const text = await response.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(text, 'text/html');
+        
+        const links = doc.querySelectorAll("link[rel*='icon']");
+        if (links.length > 0) {
+          let href = links[0].getAttribute("href");
+          favicon = new URL(href, origin).href;
+        } else {
+          favicon = origin + "/favicon.ico";
+        }
+      } catch (fetchErr) {
+        // Fallback to Google S2 if fetch fails (e.g. CORS block)
+        favicon = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
       }
       
-      // Add favicon as an option to the dropdown list
-      if (!emojiData.some(e => e.char === favicon)) {
-        emojiData.unshift({ char: favicon, name: 'favicon icono web página pagina ' + domain });
-        renderEmojiList(emojiSearch.value);
-      }
+      // Add favicon to currentFavicon
+      currentFavicon = { char: favicon, name: 'favicon icono web página pagina ' + domain };
+      renderEmojiList(emojiSearch.value);
       
-      if (!appIconField.value || emojiData.some(e => e.char === appIconField.value && e.char !== favicon)) {
+      const isSystemEmoji = typeof systemEmojis !== 'undefined' && systemEmojis.some(e => e.char === appIconField.value);
+      if (!appIconField.value || isSystemEmoji) {
         appIconField.value = favicon;
         appIconButton.innerHTML = renderAppIcon(favicon);
       }
     } catch(e) {
-      // Ignore URL or fetch errors
+      // Ignore URL parsing errors
     }
   });
 
