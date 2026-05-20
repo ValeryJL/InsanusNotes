@@ -1,0 +1,16 @@
+{
+  "name": "memospace",
+  "private": true,
+  "version": "1.0.0",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "electron": "^30.0.0",
+    "vite": "^5.0.0"
+  }
+}
